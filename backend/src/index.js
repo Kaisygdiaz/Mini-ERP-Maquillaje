@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const pool = require('./db/conexion');
 const categoriasRoutes = require('./routes/categoriasRoutes');
+const productosRoutes = require('./routes/productosRoutes');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 
 
 app.use('/api/categorias', categoriasRoutes);
+app.use('/api/productos', productosRoutes);
 
 /*
   Ruta principal de prueba.
