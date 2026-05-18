@@ -6,6 +6,7 @@ const pool = require('./db/conexion');
 const categoriasRoutes = require('./routes/categoriasRoutes');
 const productosRoutes = require('./routes/productosRoutes');
 const clientesRoutes = require('./routes/clientesRoutes');
+const ventasRoutes = require('./routes/ventasRoutes');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/categorias', categoriasRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/clientes', clientesRoutes);
+app.use('/api/ventas', ventasRoutes);
 
 /*
   Ruta principal de prueba.
