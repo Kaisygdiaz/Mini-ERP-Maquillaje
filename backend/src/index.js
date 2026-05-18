@@ -7,6 +7,7 @@ const categoriasRoutes = require('./routes/categoriasRoutes');
 const productosRoutes = require('./routes/productosRoutes');
 const clientesRoutes = require('./routes/clientesRoutes');
 const ventasRoutes = require('./routes/ventasRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/categorias', categoriasRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/ventas', ventasRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 /*
   Ruta principal de prueba.
