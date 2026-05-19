@@ -1,17 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import Dashboard from './pages/Dashboard';
 import './styles/dashboard.css';
-
-const Dashboard = () => {
-  return (
-    <div>
-      <h2 className="page-title">Dashboard Gerencial</h2>
-      <p className="page-subtitle">
-        Resumen general de ventas, inventario y productos de la empresa.
-      </p>
-    </div>
-  );
-};
 
 const Productos = () => <h2 className="page-title">Productos</h2>;
 const Categorias = () => <h2 className="page-title">Categorías</h2>;
