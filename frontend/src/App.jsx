@@ -2,9 +2,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Categorias from './pages/Categorias';
+import Productos from './pages/Productos';
 import './styles/dashboard.css';
 
-const Productos = () => <h2 className="page-title">Productos</h2>;
+
 const Clientes = () => <h2 className="page-title">Clientes</h2>;
 const Ventas = () => <h2 className="page-title">Ventas</h2>;
 

@@ -1,0 +1,424 @@
+import { useEffect, useState } from 'react';
+import api from '../api/axiosConfig';
+
+/*
+  Página para administrar productos.
+  Permite listar, crear, editar y eliminar productos desde el frontend.
+  También consume las categorías para asignarlas a cada producto.
+*/
+const Productos = () => {
+  const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [productoEditando, setProductoEditando] = useState(null);
+  const [mensaje, setMensaje] = useState('');
+
+  const [formulario, setFormulario] = useState({
+    id_categoria: '',
+    nombre: '',
+    marca: '',
+    descripcion: '',
+    precio_compra: '',
+    precio_venta: '',
+    stock_actual: '',
+    stock_minimo: '',
+    fecha_ingreso: '',
+    estado: 'Activo'
+  });
+
+  const obtenerProductos = async () => {
+    try {
+      const respuesta = await api.get('/productos');
+      setProductos(respuesta.data);
+    } catch (error) {
+      console.error('Error al obtener productos:', error);
+      setMensaje('Error al cargar los productos');
+    }
+  };
+
+  const obtenerCategorias = async () => {
+    try {
+      const respuesta = await api.get('/categorias');
+      setCategorias(respuesta.data);
+    } catch (error) {
+      console.error('Error al obtener categorías:', error);
+      setMensaje('Error al cargar las categorías');
+    }
+  };
+
+  useEffect(() => {
+    obtenerProductos();
+    obtenerCategorias();
+  }, []);
+
+  const manejarCambio = (e) => {
+    const { name, value } = e.target;
+
+    setFormulario({
+      ...formulario,
+      [name]: value
+    });
+  };
+
+  const limpiarFormulario = () => {
+    setFormulario({
+      id_categoria: '',
+      nombre: '',
+      marca: '',
+      descripcion: '',
+      precio_compra: '',
+      precio_venta: '',
+      stock_actual: '',
+      stock_minimo: '',
+      fecha_ingreso: '',
+      estado: 'Activo'
+    });
+
+    setProductoEditando(null);
+  };
+
+  const formatoMoneda = (valor) => {
+    const numero = Number(valor || 0);
+
+    return numero.toLocaleString('es-GT', {
+      style: 'currency',
+      currency: 'GTQ'
+    });
+  };
+
+  const guardarProducto = async (e) => {
+    e.preventDefault();
+
+    if (
+      !formulario.id_categoria ||
+      !formulario.nombre.trim() ||
+      !formulario.precio_compra ||
+      !formulario.precio_venta
+    ) {
+      setMensaje('Categoría, nombre, precio de compra y precio de venta son obligatorios');
+      return;
+    }
+
+    const datosProducto = {
+      ...formulario,
+      id_categoria: Number(formulario.id_categoria),
+      precio_compra: Number(formulario.precio_compra),
+      precio_venta: Number(formulario.precio_venta),
+      stock_actual: Number(formulario.stock_actual || 0),
+      stock_minimo: Number(formulario.stock_minimo || 5),
+      fecha_ingreso: formulario.fecha_ingreso || null
+    };
+
+    try {
+      if (productoEditando) {
+        await api.put(`/productos/${productoEditando}`, datosProducto);
+        setMensaje('Producto actualizado correctamente');
+      } else {
+        await api.post('/productos', datosProducto);
+        setMensaje('Producto creado correctamente');
+      }
+
+      limpiarFormulario();
+      obtenerProductos();
+    } catch (error) {
+      console.error('Error al guardar producto:', error);
+      setMensaje('Error al guardar el producto');
+    }
+  };
+
+  const cargarProductoParaEditar = (producto) => {
+    setProductoEditando(producto.id_producto);
+
+    setFormulario({
+      id_categoria: producto.id_categoria || '',
+      nombre: producto.nombre || '',
+      marca: producto.marca || '',
+      descripcion: producto.descripcion || '',
+      precio_compra: producto.precio_compra || '',
+      precio_venta: producto.precio_venta || '',
+      stock_actual: producto.stock_actual || '',
+      stock_minimo: producto.stock_minimo || '',
+      fecha_ingreso: producto.fecha_ingreso
+        ? producto.fecha_ingreso.substring(0, 10)
+        : '',
+      estado: producto.estado || 'Activo'
+    });
+  };
+
+  const eliminarProducto = async (id) => {
+    const confirmar = window.confirm('¿Seguro que deseas eliminar este producto?');
+
+    if (!confirmar) return;
+
+    try {
+      await api.delete(`/productos/${id}`);
+      setMensaje('Producto eliminado correctamente');
+      obtenerProductos();
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      setMensaje('No se pudo eliminar el producto. Puede estar relacionado con ventas o inventario.');
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="page-title">Productos</h2>
+        <p className="page-subtitle">
+          Administración de productos de maquillaje, skincare y cuidado personal.
+        </p>
+      </div>
+
+      {mensaje && (
+        <div className="alert alert-info py-2">
+          {mensaje}
+        </div>
+      )}
+
+      <div className="row g-4">
+        <div className="col-lg-4">
+          <div className="card shadow-sm border-0">
+            <div className="card-body">
+              <h5 className="fw-bold mb-3">
+                {productoEditando ? 'Editar producto' : 'Nuevo producto'}
+              </h5>
+
+              <form onSubmit={guardarProducto}>
+                <div className="mb-3">
+                  <label className="form-label">Categoría</label>
+                  <select
+                    name="id_categoria"
+                    className="form-select"
+                    value={formulario.id_categoria}
+                    onChange={manejarCambio}
+                  >
+                    <option value="">Seleccionar categoría</option>
+                    {categorias.map((categoria) => (
+                      <option
+                        key={categoria.id_categoria}
+                        value={categoria.id_categoria}
+                      >
+                        {categoria.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Nombre</label>
+                  <input
+                    type="text"
+                    name="nombre"
+                    className="form-control"
+                    value={formulario.nombre}
+                    onChange={manejarCambio}
+                    placeholder="Ej. Base líquida tono natural"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Marca</label>
+                  <input
+                    type="text"
+                    name="marca"
+                    className="form-control"
+                    value={formulario.marca}
+                    onChange={manejarCambio}
+                    placeholder="Ej. Maybelline"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Descripción</label>
+                  <textarea
+                    name="descripcion"
+                    className="form-control"
+                    rows="3"
+                    value={formulario.descripcion}
+                    onChange={manejarCambio}
+                    placeholder="Descripción del producto"
+                  />
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Precio compra</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="precio_compra"
+                      className="form-control"
+                      value={formulario.precio_compra}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Precio venta</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="precio_venta"
+                      className="form-control"
+                      value={formulario.precio_venta}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Stock actual</label>
+                    <input
+                      type="number"
+                      name="stock_actual"
+                      className="form-control"
+                      value={formulario.stock_actual}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Stock mínimo</label>
+                    <input
+                      type="number"
+                      name="stock_minimo"
+                      className="form-control"
+                      value={formulario.stock_minimo}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Fecha ingreso</label>
+                  <input
+                    type="date"
+                    name="fecha_ingreso"
+                    className="form-control"
+                    value={formulario.fecha_ingreso}
+                    onChange={manejarCambio}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Estado</label>
+                  <select
+                    name="estado"
+                    className="form-select"
+                    value={formulario.estado}
+                    onChange={manejarCambio}
+                  >
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="Agotado">Agotado</option>
+                  </select>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-primary">
+                    {productoEditando ? 'Actualizar' : 'Guardar'}
+                  </button>
+
+                  {productoEditando && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={limpiarFormulario}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-8">
+          <div className="card shadow-sm border-0">
+            <div className="card-body">
+              <h5 className="fw-bold mb-3">Listado de productos</h5>
+
+              <div className="table-responsive">
+                <table className="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Categoría</th>
+                      <th>Precio venta</th>
+                      <th>Stock</th>
+                      <th>Estado</th>
+                      <th className="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productos.map((producto) => (
+                      <tr key={producto.id_producto}>
+                        <td>
+                          <div className="fw-semibold">{producto.nombre}</div>
+                          <small className="text-muted">{producto.marca || 'Sin marca'}</small>
+                        </td>
+                        <td>{producto.categoria}</td>
+                        <td>{formatoMoneda(producto.precio_venta)}</td>
+                        <td>
+                          <span
+                            className={
+                              producto.stock_actual <= producto.stock_minimo
+                                ? 'badge bg-danger'
+                                : 'badge bg-success'
+                            }
+                          >
+                            {producto.stock_actual}
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            className={
+                              producto.estado === 'Activo'
+                                ? 'badge bg-success'
+                                : producto.estado === 'Agotado'
+                                  ? 'badge bg-danger'
+                                  : 'badge bg-secondary'
+                            }
+                          >
+                            {producto.estado}
+                          </span>
+                        </td>
+                        <td className="text-end">
+                          <button
+                            className="btn btn-sm btn-warning me-2"
+                            onClick={() => cargarProductoParaEditar(producto)}
+                          >
+                            Editar
+                          </button>
+
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => eliminarProducto(producto.id_producto)}
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {productos.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="text-muted">
+                          No hay productos registrados.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Productos;
