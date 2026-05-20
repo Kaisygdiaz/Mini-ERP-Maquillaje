@@ -4,11 +4,10 @@ import Dashboard from './pages/Dashboard';
 import Categorias from './pages/Categorias';
 import Productos from './pages/Productos';
 import Clientes from './pages/Clientes';
+import Ventas from './pages/Ventas';
 import './styles/dashboard.css';
 
 
-
-const Ventas = () => <h2 className="page-title">Ventas</h2>;
 
 function App() {
   return (
