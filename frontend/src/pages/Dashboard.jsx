@@ -7,8 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   PieChart,
-  Pie,
-  Cell
+  Pie
 } from 'recharts';
 
 import api from '../api/axiosConfig';
@@ -42,10 +41,44 @@ const Dashboard = () => {
       ]);
 
       setResumen(resumenRes.data);
-      setProductosMasVendidos(masVendidosRes.data);
-      setVentasPorCategoria(categoriaRes.data);
-      setProductosPromocion(promocionRes.data);
-      setStockBajo(stockBajoRes.data);
+
+      /*
+        MySQL puede devolver valores DECIMAL como texto.
+        Por eso se convierten a número antes de enviarlos a las gráficas.
+      */
+      setProductosMasVendidos(
+        masVendidosRes.data.map((item) => ({
+          ...item,
+          unidades_vendidas: Number(item.unidades_vendidas),
+          total_generado: Number(item.total_generado)
+        }))
+      );
+
+      setVentasPorCategoria(
+        categoriaRes.data.map((item) => ({
+          ...item,
+          total_vendido: Number(item.total_vendido),
+          unidades_vendidas: Number(item.unidades_vendidas)
+        }))
+      );
+
+      setProductosPromocion(
+        promocionRes.data.map((item) => ({
+          ...item,
+          stock_actual: Number(item.stock_actual),
+          stock_minimo: Number(item.stock_minimo),
+          precio_venta: Number(item.precio_venta),
+          unidades_vendidas: Number(item.unidades_vendidas)
+        }))
+      );
+
+      setStockBajo(
+        stockBajoRes.data.map((item) => ({
+          ...item,
+          stock_actual: Number(item.stock_actual),
+          stock_minimo: Number(item.stock_minimo)
+        }))
+      );
     } catch (error) {
       console.error('Error al cargar dashboard:', error);
     }
@@ -113,16 +146,22 @@ const Dashboard = () => {
             <div className="card-body">
               <h5 className="fw-bold mb-3">Productos más vendidos</h5>
 
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer>
-                  <BarChart data={productosMasVendidos}>
-                    <XAxis dataKey="nombre" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="unidades_vendidas" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {productosMasVendidos.length > 0 ? (
+                <div style={{ width: '100%', height: 300 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={productosMasVendidos}>
+                      <XAxis dataKey="nombre" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="unidades_vendidas" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-muted">
+                  No hay ventas completadas para mostrar productos más vendidos.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -132,24 +171,26 @@ const Dashboard = () => {
             <div className="card-body">
               <h5 className="fw-bold mb-3">Ventas por categoría</h5>
 
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={ventasPorCategoria}
-                      dataKey="total_vendido"
-                      nameKey="categoria"
-                      outerRadius={100}
-                      label
-                    >
-                      {ventasPorCategoria.map((item, index) => (
-                        <Cell key={index} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              {ventasPorCategoria.length > 0 ? (
+                <div style={{ width: '100%', height: 300 }}>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={ventasPorCategoria}
+                        dataKey="total_vendido"
+                        nameKey="categoria"
+                        outerRadius={100}
+                        label
+                      />
+                      <Tooltip formatter={(value) => formatoMoneda(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-muted">
+                  No hay ventas completadas para mostrar por categoría.
+                </p>
+              )}
             </div>
           </div>
         </div>
