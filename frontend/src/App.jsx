@@ -9,11 +9,57 @@ import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
 import Login from './pages/Login';
 
+import {
+  puedeVerDashboard,
+  puedeVerProductos,
+  puedeVerCategorias,
+  puedeVerClientes,
+  puedeVerVentas
+} from './utils/permisos';
+
 import './styles/dashboard.css';
 
 /*
+  Ruta protegida por permisos.
+  Si el usuario no tiene permiso para acceder a una página,
+  se redirige automáticamente a la página inicial permitida para su rol.
+*/
+const RutaProtegida = ({ permitido, redireccion, children }) => {
+  if (!permitido) {
+    return <Navigate to={redireccion} replace />;
+  }
+
+  return children;
+};
+
+/*
+  Define la página inicial según el rol del usuario.
+  Administrador y Gerencia entran al Dashboard.
+  Vendedor entra directamente a Ventas.
+*/
+const obtenerRutaInicial = (usuario) => {
+  if (puedeVerDashboard(usuario)) {
+    return '/';
+  }
+
+  if (puedeVerVentas(usuario)) {
+    return '/ventas';
+  }
+
+  if (puedeVerProductos(usuario)) {
+    return '/productos';
+  }
+
+  if (puedeVerClientes(usuario)) {
+    return '/clientes';
+  }
+
+  return '/login';
+};
+
+/*
   Componente principal de la aplicación.
-  Controla si hay sesión iniciada y muestra el sistema según el usuario autenticado.
+  Controla la sesión activa, las rutas protegidas y la navegación según roles.
 */
 function App() {
   const [usuario, setUsuario] = useState(() => {
@@ -30,6 +76,8 @@ function App() {
     return <Login onLogin={setUsuario} />;
   }
 
+  const rutaInicial = obtenerRutaInicial(usuario);
+
   return (
     <BrowserRouter>
       <div className="app-layout">
@@ -37,13 +85,67 @@ function App() {
 
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/productos" element={<Productos />} />
-            <Route path="/categorias" element={<Categorias />} />
-            <Route path="/clientes" element={<Clientes />} />
-            <Route path="/ventas" element={<Ventas />} />
+            <Route
+              path="/"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerDashboard(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Dashboard />
+                </RutaProtegida>
+              }
+            />
 
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route
+              path="/productos"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerProductos(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Productos />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/categorias"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerCategorias(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Categorias />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/clientes"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerClientes(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Clientes />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/ventas"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerVentas(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Ventas />
+                </RutaProtegida>
+              }
+            />
+
+            <Route path="*" element={<Navigate to={rutaInicial} replace />} />
           </Routes>
         </main>
       </div>

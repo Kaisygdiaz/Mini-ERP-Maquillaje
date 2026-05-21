@@ -1,14 +1,18 @@
 import { NavLink } from 'react-router-dom';
 
+import {
+  puedeVerDashboard,
+  puedeVerProductos,
+  puedeVerCategorias,
+  puedeVerClientes,
+  puedeVerVentas
+} from '../utils/permisos';
+
 /*
   Menú lateral principal del sistema.
-  Muestra opciones según el rol del usuario autenticado.
+  Muestra las opciones según el rol del usuario autenticado.
 */
 const Sidebar = ({ usuario, cerrarSesion }) => {
-  const esAdministrador = usuario?.rol === 'Administrador';
-  const esVendedor = usuario?.rol === 'Vendedor';
-  const esGerencia = usuario?.rol === 'Gerencia';
-
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -25,31 +29,31 @@ const Sidebar = ({ usuario, cerrarSesion }) => {
       </div>
 
       <nav className="sidebar-menu">
-        {(esAdministrador || esGerencia) && (
+        {puedeVerDashboard(usuario) && (
           <NavLink to="/" className="sidebar-link">
             Dashboard
           </NavLink>
         )}
 
-        {(esAdministrador || esVendedor || esGerencia) && (
+        {puedeVerProductos(usuario) && (
           <NavLink to="/productos" className="sidebar-link">
             Productos
           </NavLink>
         )}
 
-        {esAdministrador && (
+        {puedeVerCategorias(usuario) && (
           <NavLink to="/categorias" className="sidebar-link">
             Categorías
           </NavLink>
         )}
 
-        {(esAdministrador || esVendedor) && (
+        {puedeVerClientes(usuario) && (
           <NavLink to="/clientes" className="sidebar-link">
             Clientes
           </NavLink>
         )}
 
-        {(esAdministrador || esVendedor || esGerencia) && (
+        {puedeVerVentas(usuario) && (
           <NavLink to="/ventas" className="sidebar-link">
             Ventas
           </NavLink>
