@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
 
 import {
@@ -14,6 +14,13 @@ const Inventario = () => {
   const [inventario, setInventario] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [mensaje, setMensaje] = useState('');
+
+  const [busquedaInventario, setBusquedaInventario] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [filtroStock, setFiltroStock] = useState('Todos');
+
+  const [busquedaMovimientos, setBusquedaMovimientos] = useState('');
+  const [filtroMovimiento, setFiltroMovimiento] = useState('Todos');
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const puedeGestionar = puedeGestionarInventario(usuarioActual);
@@ -124,6 +131,37 @@ const Inventario = () => {
     });
   };
 
+  const limpiarFiltrosInventario = () => {
+    setBusquedaInventario('');
+    setFiltroEstado('Todos');
+    setFiltroStock('Todos');
+  };
+
+  const limpiarFiltrosMovimientos = () => {
+    setBusquedaMovimientos('');
+    setFiltroMovimiento('Todos');
+  };
+
+  const obtenerClaseEstado = (estado) => {
+    if (estado === 'Activo') return 'badge bg-success';
+    if (estado === 'Agotado') return 'badge bg-danger';
+    return 'badge bg-secondary';
+  };
+
+  const obtenerClaseStock = (producto) => {
+    if (producto.stock_actual <= producto.stock_minimo) {
+      return 'badge bg-danger';
+    }
+
+    return 'badge bg-success';
+  };
+
+  const obtenerClaseMovimiento = (tipoMovimiento) => {
+    if (tipoMovimiento === 'Entrada') return 'badge bg-success';
+    if (tipoMovimiento === 'Salida') return 'badge bg-danger';
+    return 'badge bg-warning text-dark';
+  };
+
   const registrarEntrada = async (e) => {
     e.preventDefault();
 
@@ -196,27 +234,104 @@ const Inventario = () => {
     }
   };
 
-  const totalValorCompra = inventario.reduce(
-    (total, item) => total + Number(item.valor_compra || 0),
-    0
-  );
+  const inventarioFiltrado = useMemo(() => {
+    const texto = busquedaInventario.trim().toLowerCase();
 
-  const totalValorVenta = inventario.reduce(
-    (total, item) => total + Number(item.valor_venta || 0),
-    0
-  );
+    return inventario.filter((producto) => {
+      const stockActual = Number(producto.stock_actual || 0);
+      const stockMinimo = Number(producto.stock_minimo || 0);
 
-  const productosStockBajo = inventario.filter(
-    (item) => item.stock_actual <= item.stock_minimo && item.estado === 'Activo'
-  ).length;
+      const coincideBusqueda =
+        !texto ||
+        producto.nombre?.toLowerCase().includes(texto) ||
+        producto.marca?.toLowerCase().includes(texto) ||
+        producto.categoria?.toLowerCase().includes(texto) ||
+        producto.estado?.toLowerCase().includes(texto);
+
+      const coincideEstado =
+        filtroEstado === 'Todos' || producto.estado === filtroEstado;
+
+      const coincideStock =
+        filtroStock === 'Todos' ||
+        (filtroStock === 'Stock bajo' && stockActual <= stockMinimo) ||
+        (filtroStock === 'Disponible' && stockActual > stockMinimo) ||
+        (filtroStock === 'Sin stock' && stockActual === 0);
+
+      return coincideBusqueda && coincideEstado && coincideStock;
+    });
+  }, [inventario, busquedaInventario, filtroEstado, filtroStock]);
+
+  const movimientosFiltrados = useMemo(() => {
+    const texto = busquedaMovimientos.trim().toLowerCase();
+
+    return movimientos.filter((movimiento) => {
+      const fechaTexto = formatoFecha(movimiento.fecha_movimiento).toLowerCase();
+
+      const coincideBusqueda =
+        !texto ||
+        String(movimiento.id_movimiento).includes(texto) ||
+        movimiento.producto?.toLowerCase().includes(texto) ||
+        movimiento.categoria?.toLowerCase().includes(texto) ||
+        movimiento.tipo_movimiento?.toLowerCase().includes(texto) ||
+        movimiento.usuario?.toLowerCase().includes(texto) ||
+        movimiento.descripcion?.toLowerCase().includes(texto) ||
+        fechaTexto.includes(texto);
+
+      const coincideTipo =
+        filtroMovimiento === 'Todos' ||
+        movimiento.tipo_movimiento === filtroMovimiento;
+
+      return coincideBusqueda && coincideTipo;
+    });
+  }, [movimientos, busquedaMovimientos, filtroMovimiento]);
+
+  const resumenInventario = useMemo(() => {
+    const totalProductos = inventario.length;
+
+    const totalValorCompra = inventario.reduce(
+      (total, item) => total + Number(item.valor_compra || 0),
+      0
+    );
+
+    const totalValorVenta = inventario.reduce(
+      (total, item) => total + Number(item.valor_venta || 0),
+      0
+    );
+
+    const productosStockBajo = inventario.filter(
+      (item) => item.stock_actual <= item.stock_minimo && item.estado === 'Activo'
+    ).length;
+
+    const productosDisponibles = inventario.filter(
+      (item) => item.stock_actual > item.stock_minimo && item.estado === 'Activo'
+    ).length;
+
+    return {
+      totalProductos,
+      totalValorCompra,
+      totalValorVenta,
+      productosStockBajo,
+      productosDisponibles
+    };
+  }, [inventario]);
 
   return (
     <div>
       <div className="mb-4">
-        <h2 className="page-title">Inventario</h2>
-        <p className="page-subtitle">
-          Consulta de existencias, valor de inventario y trazabilidad de movimientos.
-        </p>
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h2 className="page-title">Inventario</h2>
+            <p className="page-subtitle">
+              Control de existencias, valor del inventario y trazabilidad de movimientos.
+            </p>
+          </div>
+
+          <div className="text-end">
+            <span className="badge bg-light text-dark">
+              {inventarioFiltrado.length} de {inventario.length} productos
+            </span>
+          </div>
+        </div>
       </div>
 
       {mensaje && (
@@ -231,44 +346,59 @@ const Inventario = () => {
         </div>
       )}
 
-      <div className="row g-4 mb-4">
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-body">
-              <p className="text-muted mb-1">Valor inventario compra</p>
-              <h3 className="fw-bold mb-1">{formatoMoneda(totalValorCompra)}</h3>
-              <small className="text-muted">Costo estimado del inventario actual</small>
-            </div>
+      <div className="dashboard-kpi-grid mb-4">
+        <div className="stat-card stat-card-primary">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Valor inventario compra</span>
+            <span className="stat-card-accent"></span>
           </div>
+          <div className="stat-card-value">
+            {formatoMoneda(resumenInventario.totalValorCompra)}
+          </div>
+          <p className="stat-card-description">Costo estimado del stock actual</p>
         </div>
 
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-body">
-              <p className="text-muted mb-1">Valor inventario venta</p>
-              <h3 className="fw-bold mb-1">{formatoMoneda(totalValorVenta)}</h3>
-              <small className="text-muted">Valor potencial de venta</small>
-            </div>
+        <div className="stat-card stat-card-info">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Valor inventario venta</span>
+            <span className="stat-card-accent"></span>
           </div>
+          <div className="stat-card-value">
+            {formatoMoneda(resumenInventario.totalValorVenta)}
+          </div>
+          <p className="stat-card-description">Valor potencial de venta</p>
         </div>
 
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-body">
-              <p className="text-muted mb-1">Productos con bajo stock</p>
-              <h3 className="fw-bold mb-1">{productosStockBajo}</h3>
-              <small className="text-muted">Productos que requieren revisión</small>
-            </div>
+        <div className="stat-card stat-card-danger">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Stock bajo</span>
+            <span className="stat-card-accent"></span>
           </div>
+          <div className="stat-card-value">{resumenInventario.productosStockBajo}</div>
+          <p className="stat-card-description">Productos que requieren revisión</p>
+        </div>
+
+        <div className="stat-card stat-card-success">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Disponibles</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenInventario.productosDisponibles}</div>
+          <p className="stat-card-description">Productos con stock saludable</p>
         </div>
       </div>
 
       {puedeGestionar && (
         <div className="row g-4 mb-4">
           <div className="col-lg-6">
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 form-card">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">Registrar entrada de inventario</h5>
+                <div className="mb-3">
+                  <h5 className="fw-bold mb-1">Registrar entrada de inventario</h5>
+                  <p className="text-muted small mb-0">
+                    Suma unidades al stock por compras o reposición.
+                  </p>
+                </div>
 
                 <form onSubmit={registrarEntrada}>
                   <div className="mb-3">
@@ -321,9 +451,14 @@ const Inventario = () => {
           </div>
 
           <div className="col-lg-6">
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 form-card">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">Registrar ajuste de inventario</h5>
+                <div className="mb-3">
+                  <h5 className="fw-bold mb-1">Registrar ajuste de inventario</h5>
+                  <p className="text-muted small mb-0">
+                    Ajusta diferencias por conteo físico, pérdida o corrección.
+                  </p>
+                </div>
 
                 <form onSubmit={registrarAjuste}>
                   <div className="mb-3">
@@ -382,7 +517,63 @@ const Inventario = () => {
 
       <div className="card shadow-sm border-0 mb-4">
         <div className="card-body">
-          <h5 className="fw-bold mb-3">Inventario actual</h5>
+          <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+              <h5 className="fw-bold mb-1">Inventario actual</h5>
+              <p className="text-muted small mb-0">
+                Consulta productos por disponibilidad, estado, categoría o valor comercial.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline-dark btn-sm"
+              onClick={limpiarFiltrosInventario}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-xl-5 col-lg-12">
+              <label className="form-label">Buscar producto</label>
+              <input
+                type="text"
+                className="form-control"
+                value={busquedaInventario}
+                onChange={(e) => setBusquedaInventario(e.target.value)}
+                placeholder="Buscar por producto, marca, categoría o estado"
+              />
+            </div>
+
+            <div className="col-xl-3 col-md-6">
+              <label className="form-label">Estado</label>
+              <select
+                className="form-select"
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Activo">Activo</option>
+                <option value="Agotado">Agotado</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+
+            <div className="col-xl-4 col-md-6">
+              <label className="form-label">Condición de stock</label>
+              <select
+                className="form-select"
+                value={filtroStock}
+                onChange={(e) => setFiltroStock(e.target.value)}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Disponible">Disponible</option>
+                <option value="Stock bajo">Stock bajo</option>
+                <option value="Sin stock">Sin stock</option>
+              </select>
+            </div>
+          </div>
 
           <div className="table-responsive">
             <table className="table table-hover align-middle productos-table">
@@ -399,50 +590,45 @@ const Inventario = () => {
                   <th>Valor venta</th>
                 </tr>
               </thead>
+
               <tbody>
-                {inventario.map((producto) => (
+                {inventarioFiltrado.map((producto) => (
                   <tr key={producto.id_producto}>
                     <td>
                       <div className="fw-semibold">{producto.nombre}</div>
                       <small className="text-muted">{producto.marca || 'Sin marca'}</small>
                     </td>
+
                     <td>{producto.categoria}</td>
+
                     <td>{formatoMoneda(producto.precio_compra)}</td>
+
                     <td>{formatoMoneda(producto.precio_venta)}</td>
+
                     <td>
-                      <span
-                        className={
-                          producto.stock_actual <= producto.stock_minimo
-                            ? 'badge bg-danger'
-                            : 'badge bg-success'
-                        }
-                      >
+                      <span className={obtenerClaseStock(producto)}>
                         {producto.stock_actual}
                       </span>
                     </td>
+
                     <td>{producto.stock_minimo}</td>
+
                     <td>
-                      <span
-                        className={
-                          producto.estado === 'Activo'
-                            ? 'badge bg-success'
-                            : producto.estado === 'Agotado'
-                              ? 'badge bg-danger'
-                              : 'badge bg-secondary'
-                        }
-                      >
+                      <span className={obtenerClaseEstado(producto.estado)}>
                         {producto.estado}
                       </span>
                     </td>
+
                     <td>{formatoMoneda(producto.valor_compra)}</td>
+
                     <td>{formatoMoneda(producto.valor_venta)}</td>
                   </tr>
                 ))}
 
-                {inventario.length === 0 && (
+                {inventarioFiltrado.length === 0 && (
                   <tr>
                     <td colSpan="9" className="text-muted">
-                      No hay productos en inventario.
+                      No se encontraron productos con los filtros aplicados.
                     </td>
                   </tr>
                 )}
@@ -455,7 +641,49 @@ const Inventario = () => {
 
       <div className="card shadow-sm border-0">
         <div className="card-body">
-          <h5 className="fw-bold mb-3">Movimientos de inventario</h5>
+          <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+              <h5 className="fw-bold mb-1">Movimientos de inventario</h5>
+              <p className="text-muted small mb-0">
+                Trazabilidad de entradas, salidas y ajustes registrados.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline-dark btn-sm"
+              onClick={limpiarFiltrosMovimientos}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-xl-8 col-lg-12">
+              <label className="form-label">Buscar movimiento</label>
+              <input
+                type="text"
+                className="form-control"
+                value={busquedaMovimientos}
+                onChange={(e) => setBusquedaMovimientos(e.target.value)}
+                placeholder="Buscar por producto, tipo, usuario, fecha o descripción"
+              />
+            </div>
+
+            <div className="col-xl-4 col-md-6">
+              <label className="form-label">Tipo de movimiento</label>
+              <select
+                className="form-select"
+                value={filtroMovimiento}
+                onChange={(e) => setFiltroMovimiento(e.target.value)}
+              >
+                <option value="Todos">Todos</option>
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+                <option value="Ajuste">Ajuste</option>
+              </select>
+            </div>
+          </div>
 
           <div className="table-responsive">
             <table className="table table-hover align-middle">
@@ -471,36 +699,36 @@ const Inventario = () => {
                   <th>Descripción</th>
                 </tr>
               </thead>
+
               <tbody>
-                {movimientos.map((movimiento) => (
+                {movimientosFiltrados.map((movimiento) => (
                   <tr key={movimiento.id_movimiento}>
                     <td>{movimiento.id_movimiento}</td>
+
                     <td>{formatoFecha(movimiento.fecha_movimiento)}</td>
+
                     <td>{movimiento.producto}</td>
+
                     <td>{movimiento.categoria}</td>
+
                     <td>
-                      <span
-                        className={
-                          movimiento.tipo_movimiento === 'Entrada'
-                            ? 'badge bg-success'
-                            : movimiento.tipo_movimiento === 'Salida'
-                              ? 'badge bg-danger'
-                              : 'badge bg-warning text-dark'
-                        }
-                      >
+                      <span className={obtenerClaseMovimiento(movimiento.tipo_movimiento)}>
                         {movimiento.tipo_movimiento}
                       </span>
                     </td>
+
                     <td>{movimiento.cantidad}</td>
+
                     <td>{movimiento.usuario || 'Sin usuario'}</td>
+
                     <td>{movimiento.descripcion || 'Sin descripción'}</td>
                   </tr>
                 ))}
 
-                {movimientos.length === 0 && (
+                {movimientosFiltrados.length === 0 && (
                   <tr>
                     <td colSpan="8" className="text-muted">
-                      No hay movimientos registrados.
+                      No se encontraron movimientos con los filtros aplicados.
                     </td>
                   </tr>
                 )}
