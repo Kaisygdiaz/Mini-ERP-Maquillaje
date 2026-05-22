@@ -83,3 +83,7 @@ export const puedeGestionarInventario = (usuario) => {
 export const puedeVerReportesGerenciales = (usuario) => {
   return esAdministrador(usuario) || esGerencia(usuario);
 };
+
+export const puedeVerReportes = (usuario) => {
+  return esAdministrador(usuario) || esGerencia(usuario);
+};

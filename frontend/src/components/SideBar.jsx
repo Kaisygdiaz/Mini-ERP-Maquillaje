@@ -7,7 +7,8 @@ import {
   puedeVerClientes,
   puedeVerVentas,
   puedeVerUsuarios,
-  puedeVerInventario
+  puedeVerInventario,
+  puedeVerReportes
 } from '../utils/permisos';
 
 /*
@@ -64,6 +65,12 @@ const Sidebar = ({ usuario, cerrarSesion }) => {
         {puedeVerInventario(usuario) && (
           <NavLink to="/inventario" className="sidebar-link">
             Inventario
+          </NavLink>
+        )}
+
+        {puedeVerReportes(usuario) && (
+          <NavLink to="/reportes" className="sidebar-link">
+            Reportes
           </NavLink>
         )}
 

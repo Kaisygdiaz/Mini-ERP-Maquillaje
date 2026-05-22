@@ -9,6 +9,7 @@ import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
 import Usuarios from './pages/Usuarios';
 import Inventario from './pages/Inventario';
+import Reportes from './pages/Reportes';
 import Login from './pages/Login';
 
 import {
@@ -18,7 +19,8 @@ import {
   puedeVerClientes,
   puedeVerVentas,
   puedeVerUsuarios,
-  puedeVerInventario
+  puedeVerInventario,
+  puedeVerReportes
 } from './utils/permisos';
 
 import './styles/dashboard.css';
@@ -59,6 +61,10 @@ const obtenerRutaInicial = (usuario) => {
 
   if (puedeVerInventario(usuario)) {
     return '/inventario';
+  }
+
+  if (puedeVerReportes(usuario)) {
+    return '/reportes';
   }
 
   if (puedeVerUsuarios(usuario)) {
@@ -164,6 +170,18 @@ function App() {
                   redireccion={rutaInicial}
                 >
                   <Inventario />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/reportes"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerReportes(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Reportes />
                 </RutaProtegida>
               }
             />
