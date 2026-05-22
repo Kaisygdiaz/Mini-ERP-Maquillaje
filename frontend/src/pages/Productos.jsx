@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
 import { puedeGestionarProductos } from '../utils/permisos';
 
@@ -12,6 +13,10 @@ const Productos = () => {
   const [categorias, setCategorias] = useState([]);
   const [productoEditando, setProductoEditando] = useState(null);
   const [mensaje, setMensaje] = useState('');
+
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [filtroCategoria, setFiltroCategoria] = useState('Todas');
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const puedeGestionar = puedeGestionarProductos(usuarioActual);
@@ -80,6 +85,12 @@ const Productos = () => {
     setProductoEditando(null);
   };
 
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('Todos');
+    setFiltroCategoria('Todas');
+  };
+
   const formatoMoneda = (valor) => {
     const numero = Number(valor || 0);
 
@@ -88,6 +99,62 @@ const Productos = () => {
       currency: 'GTQ'
     });
   };
+
+  const obtenerClaseEstado = (estado) => {
+    if (estado === 'Activo') return 'badge bg-success';
+    if (estado === 'Agotado') return 'badge bg-danger';
+    return 'badge bg-secondary';
+  };
+
+  const obtenerClaseStock = (producto) => {
+    if (Number(producto.stock_actual || 0) <= Number(producto.stock_minimo || 0)) {
+      return 'badge bg-danger';
+    }
+
+    return 'badge bg-success';
+  };
+
+  const productosFiltrados = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+
+    return productos.filter((producto) => {
+      const coincideBusqueda =
+        !texto ||
+        producto.nombre?.toLowerCase().includes(texto) ||
+        producto.marca?.toLowerCase().includes(texto) ||
+        producto.categoria?.toLowerCase().includes(texto) ||
+        producto.descripcion?.toLowerCase().includes(texto);
+
+      const coincideEstado =
+        filtroEstado === 'Todos' || producto.estado === filtroEstado;
+
+      const coincideCategoria =
+        filtroCategoria === 'Todas' ||
+        String(producto.id_categoria) === String(filtroCategoria) ||
+        producto.categoria === filtroCategoria;
+
+      return coincideBusqueda && coincideEstado && coincideCategoria;
+    });
+  }, [productos, busqueda, filtroEstado, filtroCategoria]);
+
+  const resumenProductos = useMemo(() => {
+    const total = productos.length;
+    const activos = productos.filter((producto) => producto.estado === 'Activo').length;
+    const agotados = productos.filter((producto) => producto.estado === 'Agotado').length;
+    const inactivos = productos.filter((producto) => producto.estado === 'Inactivo').length;
+    const stockBajo = productos.filter(
+      (producto) =>
+        Number(producto.stock_actual || 0) <= Number(producto.stock_minimo || 0)
+    ).length;
+
+    return {
+      total,
+      activos,
+      agotados,
+      inactivos,
+      stockBajo
+    };
+  }, [productos]);
 
   const guardarProducto = async (e) => {
     e.preventDefault();
@@ -227,10 +294,20 @@ const Productos = () => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="page-title">Productos</h2>
-        <p className="page-subtitle">
-          Administración de productos de maquillaje, skincare y cuidado personal.
-        </p>
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h2 className="page-title">Productos</h2>
+            <p className="page-subtitle">
+              Control de productos, precios, stock y estado comercial del inventario.
+            </p>
+          </div>
+
+          <div className="text-end">
+            <span className="badge bg-light text-dark">
+              {productosFiltrados.length} de {productos.length} productos
+            </span>
+          </div>
+        </div>
       </div>
 
       {mensaje && (
@@ -246,14 +323,59 @@ const Productos = () => {
         </div>
       )}
 
+      <div className="dashboard-kpi-grid mb-4">
+        <div className="stat-card stat-card-info">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Total productos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenProductos.total}</div>
+          <p className="stat-card-description">Productos registrados en el sistema</p>
+        </div>
+
+        <div className="stat-card stat-card-success">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Activos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenProductos.activos}</div>
+          <p className="stat-card-description">Disponibles para venta</p>
+        </div>
+
+        <div className="stat-card stat-card-danger">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Stock bajo</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenProductos.stockBajo}</div>
+          <p className="stat-card-description">Requieren revisión de inventario</p>
+        </div>
+
+        <div className="stat-card stat-card-secondary">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Agotados/Inactivos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">
+            {resumenProductos.agotados + resumenProductos.inactivos}
+          </div>
+          <p className="stat-card-description">Fuera de venta actualmente</p>
+        </div>
+      </div>
+
       <div className="row g-4">
         {puedeGestionar && (
           <div className="col-xl-3 col-lg-4">
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 form-card">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">
-                  {productoEditando ? 'Editar producto' : 'Nuevo producto'}
-                </h5>
+                <div className="mb-3">
+                  <h5 className="fw-bold mb-1">
+                    {productoEditando ? 'Editar producto' : 'Nuevo producto'}
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    Registra la información comercial y de inventario del producto.
+                  </p>
+                </div>
 
                 <form onSubmit={guardarProducto}>
                   <div className="mb-3">
@@ -411,7 +533,68 @@ const Productos = () => {
         <div className={puedeGestionar ? 'col-xl-9 col-lg-8' : 'col-12'}>
           <div className="card shadow-sm border-0">
             <div className="card-body">
-              <h5 className="fw-bold mb-3">Listado de productos</h5>
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                <div>
+                  <h5 className="fw-bold mb-1">Listado de productos</h5>
+                  <p className="text-muted small mb-0">
+                    Consulta productos por categoría, estado, stock o datos comerciales.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-dark btn-sm"
+                  onClick={limpiarFiltros}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div className="row g-3 mb-4">
+                <div className="col-xl-5 col-lg-12">
+                  <label className="form-label">Buscar producto</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar por nombre, marca, categoría o descripción"
+                  />
+                </div>
+
+                <div className="col-xl-3 col-md-6">
+                  <label className="form-label">Estado</label>
+                  <select
+                    className="form-select"
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Agotado">Agotado</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+
+                <div className="col-xl-4 col-md-6">
+                  <label className="form-label">Categoría</label>
+                  <select
+                    className="form-select"
+                    value={filtroCategoria}
+                    onChange={(e) => setFiltroCategoria(e.target.value)}
+                  >
+                    <option value="Todas">Todas</option>
+                    {categorias.map((categoria) => (
+                      <option
+                        key={categoria.id_categoria}
+                        value={categoria.id_categoria}
+                      >
+                        {categoria.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
               <div className="table-responsive">
                 <table className="table table-hover align-middle productos-table">
@@ -427,8 +610,9 @@ const Productos = () => {
                       )}
                     </tr>
                   </thead>
+
                   <tbody>
-                    {productos.map((producto) => (
+                    {productosFiltrados.map((producto) => (
                       <tr key={producto.id_producto}>
                         <td>
                           <div className="fw-semibold">{producto.nombre}</div>
@@ -436,29 +620,23 @@ const Productos = () => {
                             {producto.marca || 'Sin marca'}
                           </small>
                         </td>
+
                         <td>{producto.categoria}</td>
+
                         <td>{formatoMoneda(producto.precio_venta)}</td>
+
                         <td>
-                          <span
-                            className={
-                              producto.stock_actual <= producto.stock_minimo
-                                ? 'badge bg-danger'
-                                : 'badge bg-success'
-                            }
-                          >
+                          <span className={obtenerClaseStock(producto)}>
                             {producto.stock_actual}
                           </span>
+
+                          <small className="text-muted ms-2">
+                            mín. {producto.stock_minimo}
+                          </small>
                         </td>
+
                         <td>
-                          <span
-                            className={
-                              producto.estado === 'Activo'
-                                ? 'badge bg-success'
-                                : producto.estado === 'Agotado'
-                                  ? 'badge bg-danger'
-                                  : 'badge bg-secondary'
-                            }
-                          >
+                          <span className={obtenerClaseEstado(producto.estado)}>
                             {producto.estado}
                           </span>
                         </td>
@@ -503,13 +681,13 @@ const Productos = () => {
                       </tr>
                     ))}
 
-                    {productos.length === 0 && (
+                    {productosFiltrados.length === 0 && (
                       <tr>
                         <td
                           colSpan={puedeGestionar ? 6 : 5}
                           className="text-muted"
                         >
-                          No hay productos registrados.
+                          No se encontraron productos con los filtros aplicados.
                         </td>
                       </tr>
                     )}
