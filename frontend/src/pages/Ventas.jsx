@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
 
+import {
+  puedeRegistrarVentas,
+  puedeAnularVentas
+} from '../utils/permisos';
+
 /*
   Página para registrar y consultar ventas.
-  Permite seleccionar cliente, productos, cantidades, método de pago,
-  calcular el total y registrar la venta en el backend.
+  Administrador y Vendedor pueden registrar ventas.
+  Solo Administrador puede anular ventas.
+  Gerencia únicamente puede consultar historial y detalle.
 */
 const Ventas = () => {
   const [ventas, setVentas] = useState([]);
@@ -14,22 +20,17 @@ const Ventas = () => {
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
   const [mensaje, setMensaje] = useState('');
 
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
+
+  const puedeRegistrar = puedeRegistrarVentas(usuarioActual);
+  const puedeAnular = puedeAnularVentas(usuarioActual);
+
   const [formulario, setFormulario] = useState({
     id_cliente: '',
     metodo_pago: 'Efectivo',
     id_producto: '',
     cantidad: 1
   });
-
-  /*
-    Usuario temporal.
-    Más adelante este dato vendrá del login y se guardará en localStorage.
-  */
-  const usuarioActual = JSON.parse(localStorage.getItem('usuario')) || {
-    id_usuario: 1,
-    nombre: 'Administrador Principal',
-    rol: 'Administrador'
-  };
 
   const obtenerVentas = async () => {
     try {
@@ -91,6 +92,11 @@ const Ventas = () => {
   };
 
   const agregarProductoDetalle = () => {
+    if (!puedeRegistrar) {
+      setMensaje('No tienes permisos para registrar ventas');
+      return;
+    }
+
     if (!formulario.id_producto || formulario.cantidad <= 0) {
       setMensaje('Selecciona un producto y una cantidad válida');
       return;
@@ -158,6 +164,11 @@ const Ventas = () => {
   };
 
   const quitarProductoDetalle = (idProducto) => {
+    if (!puedeRegistrar) {
+      setMensaje('No tienes permisos para modificar el detalle de la venta');
+      return;
+    }
+
     const detalleFiltrado = detalleVenta.filter(
       (item) => item.id_producto !== idProducto
     );
@@ -172,6 +183,11 @@ const Ventas = () => {
 
   const registrarVenta = async (e) => {
     e.preventDefault();
+
+    if (!puedeRegistrar) {
+      setMensaje('No tienes permisos para registrar ventas');
+      return;
+    }
 
     if (detalleVenta.length === 0) {
       setMensaje('Debe agregar al menos un producto a la venta');
@@ -220,6 +236,11 @@ const Ventas = () => {
   };
 
   const anularVenta = async (idVenta) => {
+    if (!puedeAnular) {
+      setMensaje('No tienes permisos para anular ventas');
+      return;
+    }
+
     const confirmar = window.confirm('¿Seguro que deseas anular esta venta?');
 
     if (!confirmar) return;
@@ -253,141 +274,150 @@ const Ventas = () => {
         </div>
       )}
 
+      {!puedeRegistrar && (
+        <div className="alert alert-light border py-2">
+          Estás consultando el módulo en modo lectura. Solo administración y ventas
+          pueden registrar operaciones.
+        </div>
+      )}
+
       <div className="row g-4">
-        <div className="col-xl-4 col-lg-5">
-          <div className="card shadow-sm border-0 mb-4">
-            <div className="card-body">
-              <h5 className="fw-bold mb-3">Nueva venta</h5>
+        {puedeRegistrar && (
+          <div className="col-xl-4 col-lg-5">
+            <div className="card shadow-sm border-0 mb-4">
+              <div className="card-body">
+                <h5 className="fw-bold mb-3">Nueva venta</h5>
 
-              <form onSubmit={registrarVenta}>
-                <div className="mb-3">
-                  <label className="form-label">Cliente</label>
-                  <select
-                    name="id_cliente"
-                    className="form-select"
-                    value={formulario.id_cliente}
-                    onChange={manejarCambio}
-                  >
-                    <option value="">Cliente no especificado</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.id_cliente} value={cliente.id_cliente}>
-                        {cliente.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Método de pago</label>
-                  <select
-                    name="metodo_pago"
-                    className="form-select"
-                    value={formulario.metodo_pago}
-                    onChange={manejarCambio}
-                  >
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta</option>
-                    <option value="Transferencia">Transferencia</option>
-                  </select>
-                </div>
-
-                <div className="alert alert-light border py-2">
-                  <small className="text-muted">Usuario responsable:</small>
-                  <div className="fw-semibold">{usuarioActual.nombre}</div>
-                </div>
-
-                <hr />
-
-                <div className="mb-3">
-                  <label className="form-label">Producto</label>
-                  <select
-                    name="id_producto"
-                    className="form-select"
-                    value={formulario.id_producto}
-                    onChange={manejarCambio}
-                  >
-                    <option value="">Seleccionar producto</option>
-                    {productos.map((producto) => (
-                      <option key={producto.id_producto} value={producto.id_producto}>
-                        {producto.nombre} - Stock: {producto.stock_actual}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Cantidad</label>
-                  <input
-                    type="number"
-                    name="cantidad"
-                    min="1"
-                    className="form-control"
-                    value={formulario.cantidad}
-                    onChange={manejarCambio}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-secondary w-100 mb-3"
-                  onClick={agregarProductoDetalle}
-                >
-                  Agregar producto
-                </button>
-
-                <div className="table-responsive mb-3">
-                  <table className="table table-sm align-middle">
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Subtotal</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detalleVenta.map((item) => (
-                        <tr key={item.id_producto}>
-                          <td>{item.nombre}</td>
-                          <td>{item.cantidad}</td>
-                          <td>{formatoMoneda(item.subtotal)}</td>
-                          <td className="text-end">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => quitarProductoDetalle(item.id_producto)}
-                            >
-                              X
-                            </button>
-                          </td>
-                        </tr>
+                <form onSubmit={registrarVenta}>
+                  <div className="mb-3">
+                    <label className="form-label">Cliente</label>
+                    <select
+                      name="id_cliente"
+                      className="form-select"
+                      value={formulario.id_cliente}
+                      onChange={manejarCambio}
+                    >
+                      <option value="">Cliente no especificado</option>
+                      {clientes.map((cliente) => (
+                        <option key={cliente.id_cliente} value={cliente.id_cliente}>
+                          {cliente.nombre}
+                        </option>
                       ))}
+                    </select>
+                  </div>
 
-                      {detalleVenta.length === 0 && (
+                  <div className="mb-3">
+                    <label className="form-label">Método de pago</label>
+                    <select
+                      name="metodo_pago"
+                      className="form-select"
+                      value={formulario.metodo_pago}
+                      onChange={manejarCambio}
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Tarjeta">Tarjeta</option>
+                      <option value="Transferencia">Transferencia</option>
+                    </select>
+                  </div>
+
+                  <div className="alert alert-light border py-2">
+                    <small className="text-muted">Usuario responsable:</small>
+                    <div className="fw-semibold">{usuarioActual.nombre}</div>
+                  </div>
+
+                  <hr />
+
+                  <div className="mb-3">
+                    <label className="form-label">Producto</label>
+                    <select
+                      name="id_producto"
+                      className="form-select"
+                      value={formulario.id_producto}
+                      onChange={manejarCambio}
+                    >
+                      <option value="">Seleccionar producto</option>
+                      {productos.map((producto) => (
+                        <option key={producto.id_producto} value={producto.id_producto}>
+                          {producto.nombre} - Stock: {producto.stock_actual}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Cantidad</label>
+                    <input
+                      type="number"
+                      name="cantidad"
+                      min="1"
+                      className="form-control"
+                      value={formulario.cantidad}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary w-100 mb-3"
+                    onClick={agregarProductoDetalle}
+                  >
+                    Agregar producto
+                  </button>
+
+                  <div className="table-responsive mb-3">
+                    <table className="table table-sm align-middle">
+                      <thead>
                         <tr>
-                          <td colSpan="4" className="text-muted">
-                            No hay productos agregados.
-                          </td>
+                          <th>Producto</th>
+                          <th>Cant.</th>
+                          <th>Subtotal</th>
+                          <th></th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {detalleVenta.map((item) => (
+                          <tr key={item.id_producto}>
+                            <td>{item.nombre}</td>
+                            <td>{item.cantidad}</td>
+                            <td>{formatoMoneda(item.subtotal)}</td>
+                            <td className="text-end">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => quitarProductoDetalle(item.id_producto)}
+                              >
+                                X
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
 
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <span className="fw-semibold">Total</span>
-                  <span className="fs-5 fw-bold">{formatoMoneda(totalVenta)}</span>
-                </div>
+                        {detalleVenta.length === 0 && (
+                          <tr>
+                            <td colSpan="4" className="text-muted">
+                              No hay productos agregados.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <button type="submit" className="btn btn-primary w-100">
-                  Registrar venta
-                </button>
-              </form>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="fw-semibold">Total</span>
+                    <span className="fs-5 fw-bold">{formatoMoneda(totalVenta)}</span>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary w-100">
+                    Registrar venta
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="col-xl-8 col-lg-7">
+        <div className={puedeRegistrar ? 'col-xl-8 col-lg-7' : 'col-12'}>
           <div className="card shadow-sm border-0 mb-4">
             <div className="card-body">
               <h5 className="fw-bold mb-3">Historial de ventas</h5>
@@ -432,7 +462,7 @@ const Ventas = () => {
                             Detalle
                           </button>
 
-                          {venta.estado === 'Completada' && (
+                          {puedeAnular && venta.estado === 'Completada' && (
                             <button
                               className="btn btn-sm btn-danger"
                               onClick={() => anularVenta(venta.id_venta)}
