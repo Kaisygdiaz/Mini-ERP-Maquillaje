@@ -4,7 +4,7 @@ import { puedeGestionarClientes } from '../utils/permisos';
 
 /*
   Página para administrar clientes.
-  Administrador y Vendedor pueden crear y editar clientes.
+  Administrador y Vendedor pueden crear, editar, activar e inactivar clientes.
   Gerencia solo puede consultar el listado.
 */
 const Clientes = () => {
@@ -19,7 +19,8 @@ const Clientes = () => {
     nombre: '',
     telefono: '',
     correo: '',
-    direccion: ''
+    direccion: '',
+    estado: 'Activo'
   });
 
   const obtenerClientes = async () => {
@@ -50,7 +51,8 @@ const Clientes = () => {
       nombre: '',
       telefono: '',
       correo: '',
-      direccion: ''
+      direccion: '',
+      estado: 'Activo'
     });
 
     setClienteEditando(null);
@@ -98,27 +100,52 @@ const Clientes = () => {
       nombre: cliente.nombre || '',
       telefono: cliente.telefono || '',
       correo: cliente.correo || '',
-      direccion: cliente.direccion || ''
+      direccion: cliente.direccion || '',
+      estado: cliente.estado || 'Activo'
     });
   };
 
-  const eliminarCliente = async (id) => {
+  const inactivarCliente = async (cliente) => {
     if (!puedeGestionar) {
-      setMensaje('No tienes permisos para eliminar clientes');
+      setMensaje('No tienes permisos para inactivar clientes');
       return;
     }
 
-    const confirmar = window.confirm('¿Seguro que deseas eliminar este cliente?');
+    const confirmar = window.confirm(
+      `¿Seguro que deseas inactivar al cliente "${cliente.nombre}"?`
+    );
 
     if (!confirmar) return;
 
     try {
-      await api.delete(`/clientes/${id}`);
-      setMensaje('Cliente eliminado correctamente');
+      await api.put(`/clientes/${cliente.id_cliente}/inactivar`);
+      setMensaje('Cliente inactivado correctamente');
       obtenerClientes();
     } catch (error) {
-      console.error('Error al eliminar cliente:', error);
-      setMensaje('No se pudo eliminar el cliente. Puede estar relacionado con ventas.');
+      console.error('Error al inactivar cliente:', error);
+      setMensaje('Error al inactivar el cliente');
+    }
+  };
+
+  const activarCliente = async (cliente) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para activar clientes');
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Seguro que deseas activar al cliente "${cliente.nombre}"?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await api.put(`/clientes/${cliente.id_cliente}/activar`);
+      setMensaje('Cliente activado correctamente');
+      obtenerClientes();
+    } catch (error) {
+      console.error('Error al activar cliente:', error);
+      setMensaje('Error al activar el cliente');
     }
   };
 
@@ -202,6 +229,19 @@ const Clientes = () => {
                     />
                   </div>
 
+                  <div className="mb-3">
+                    <label className="form-label">Estado</label>
+                    <select
+                      name="estado"
+                      className="form-select"
+                      value={formulario.estado}
+                      onChange={manejarCambio}
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                    </select>
+                  </div>
+
                   <div className="d-flex gap-2">
                     <button type="submit" className="btn btn-primary">
                       {clienteEditando ? 'Actualizar' : 'Guardar'}
@@ -237,6 +277,7 @@ const Clientes = () => {
                       <th>Teléfono</th>
                       <th>Correo</th>
                       <th>Dirección</th>
+                      <th>Estado</th>
                       {puedeGestionar && (
                         <th className="text-end acciones-tabla">Acciones</th>
                       )}
@@ -250,6 +291,17 @@ const Clientes = () => {
                         <td>{cliente.telefono || 'Sin teléfono'}</td>
                         <td>{cliente.correo || 'Sin correo'}</td>
                         <td>{cliente.direccion || 'Sin dirección'}</td>
+                        <td>
+                          <span
+                            className={
+                              cliente.estado === 'Activo'
+                                ? 'badge bg-success'
+                                : 'badge bg-secondary'
+                            }
+                          >
+                            {cliente.estado || 'Activo'}
+                          </span>
+                        </td>
 
                         {puedeGestionar && (
                           <td className="text-end acciones-tabla">
@@ -260,12 +312,23 @@ const Clientes = () => {
                               Editar
                             </button>
 
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() => eliminarCliente(cliente.id_cliente)}
-                            >
-                              Eliminar
-                            </button>
+                            {cliente.estado === 'Activo' && (
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => inactivarCliente(cliente)}
+                              >
+                                Inactivar
+                              </button>
+                            )}
+
+                            {cliente.estado === 'Inactivo' && (
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => activarCliente(cliente)}
+                              >
+                                Activar
+                              </button>
+                            )}
                           </td>
                         )}
                       </tr>
@@ -274,7 +337,7 @@ const Clientes = () => {
                     {clientes.length === 0 && (
                       <tr>
                         <td
-                          colSpan={puedeGestionar ? 6 : 5}
+                          colSpan={puedeGestionar ? 7 : 6}
                           className="text-muted"
                         >
                           No hay clientes registrados.
