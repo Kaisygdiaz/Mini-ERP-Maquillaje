@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
+import { puedeGestionarProductos } from '../utils/permisos';
 
 /*
   Página para administrar productos.
-  Permite listar, crear, editar y eliminar productos desde el frontend.
-  También consume las categorías para asignarlas a cada producto.
+  El administrador puede crear, editar y eliminar productos.
+  Vendedor y Gerencia solo pueden consultar el listado de productos.
 */
 const Productos = () => {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [productoEditando, setProductoEditando] = useState(null);
   const [mensaje, setMensaje] = useState('');
+
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
+  const puedeGestionar = puedeGestionarProductos(usuarioActual);
 
   const [formulario, setFormulario] = useState({
     id_categoria: '',
@@ -88,6 +92,11 @@ const Productos = () => {
   const guardarProducto = async (e) => {
     e.preventDefault();
 
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para gestionar productos');
+      return;
+    }
+
     if (
       !formulario.id_categoria ||
       !formulario.nombre.trim() ||
@@ -126,6 +135,11 @@ const Productos = () => {
   };
 
   const cargarProductoParaEditar = (producto) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para editar productos');
+      return;
+    }
+
     setProductoEditando(producto.id_producto);
 
     setFormulario({
@@ -145,6 +159,11 @@ const Productos = () => {
   };
 
   const eliminarProducto = async (id) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para eliminar productos');
+      return;
+    }
+
     const confirmar = window.confirm('¿Seguro que deseas eliminar este producto?');
 
     if (!confirmar) return;
@@ -174,173 +193,182 @@ const Productos = () => {
         </div>
       )}
 
+      {!puedeGestionar && (
+        <div className="alert alert-light border py-2">
+          Estás consultando el módulo en modo lectura. Solo el administrador puede crear,
+          editar o eliminar productos.
+        </div>
+      )}
+
       <div className="row g-4">
-        <div className="col-lg-4">
-          <div className="card shadow-sm border-0">
-            <div className="card-body">
-              <h5 className="fw-bold mb-3">
-                {productoEditando ? 'Editar producto' : 'Nuevo producto'}
-              </h5>
+        {puedeGestionar && (
+          <div className="col-xl-3 col-lg-4">
+            <div className="card shadow-sm border-0">
+              <div className="card-body">
+                <h5 className="fw-bold mb-3">
+                  {productoEditando ? 'Editar producto' : 'Nuevo producto'}
+                </h5>
 
-              <form onSubmit={guardarProducto}>
-                <div className="mb-3">
-                  <label className="form-label">Categoría</label>
-                  <select
-                    name="id_categoria"
-                    className="form-select"
-                    value={formulario.id_categoria}
-                    onChange={manejarCambio}
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    {categorias.map((categoria) => (
-                      <option
-                        key={categoria.id_categoria}
-                        value={categoria.id_categoria}
-                      >
-                        {categoria.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Nombre</label>
-                  <input
-                    type="text"
-                    name="nombre"
-                    className="form-control"
-                    value={formulario.nombre}
-                    onChange={manejarCambio}
-                    placeholder="Ej. Base líquida tono natural"
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Marca</label>
-                  <input
-                    type="text"
-                    name="marca"
-                    className="form-control"
-                    value={formulario.marca}
-                    onChange={manejarCambio}
-                    placeholder="Ej. Maybelline"
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Descripción</label>
-                  <textarea
-                    name="descripcion"
-                    className="form-control"
-                    rows="3"
-                    value={formulario.descripcion}
-                    onChange={manejarCambio}
-                    placeholder="Descripción del producto"
-                  />
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Precio compra</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="precio_compra"
-                      className="form-control"
-                      value={formulario.precio_compra}
+                <form onSubmit={guardarProducto}>
+                  <div className="mb-3">
+                    <label className="form-label">Categoría</label>
+                    <select
+                      name="id_categoria"
+                      className="form-select"
+                      value={formulario.id_categoria}
                       onChange={manejarCambio}
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Precio venta</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="precio_venta"
-                      className="form-control"
-                      value={formulario.precio_venta}
-                      onChange={manejarCambio}
-                    />
-                  </div>
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Stock actual</label>
-                    <input
-                      type="number"
-                      name="stock_actual"
-                      className="form-control"
-                      value={formulario.stock_actual}
-                      onChange={manejarCambio}
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Stock mínimo</label>
-                    <input
-                      type="number"
-                      name="stock_minimo"
-                      className="form-control"
-                      value={formulario.stock_minimo}
-                      onChange={manejarCambio}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Fecha ingreso</label>
-                  <input
-                    type="date"
-                    name="fecha_ingreso"
-                    className="form-control"
-                    value={formulario.fecha_ingreso}
-                    onChange={manejarCambio}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Estado</label>
-                  <select
-                    name="estado"
-                    className="form-select"
-                    value={formulario.estado}
-                    onChange={manejarCambio}
-                  >
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                    <option value="Agotado">Agotado</option>
-                  </select>
-                </div>
-
-                <div className="d-flex gap-2">
-                  <button type="submit" className="btn btn-primary">
-                    {productoEditando ? 'Actualizar' : 'Guardar'}
-                  </button>
-
-                  {productoEditando && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={limpiarFormulario}
                     >
-                      Cancelar
+                      <option value="">Seleccionar categoría</option>
+                      {categorias.map((categoria) => (
+                        <option
+                          key={categoria.id_categoria}
+                          value={categoria.id_categoria}
+                        >
+                          {categoria.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Nombre</label>
+                    <input
+                      type="text"
+                      name="nombre"
+                      className="form-control"
+                      value={formulario.nombre}
+                      onChange={manejarCambio}
+                      placeholder="Ej. Base líquida tono natural"
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Marca</label>
+                    <input
+                      type="text"
+                      name="marca"
+                      className="form-control"
+                      value={formulario.marca}
+                      onChange={manejarCambio}
+                      placeholder="Ej. Maybelline"
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Descripción</label>
+                    <textarea
+                      name="descripcion"
+                      className="form-control"
+                      rows="3"
+                      value={formulario.descripcion}
+                      onChange={manejarCambio}
+                      placeholder="Descripción del producto"
+                    />
+                  </div>
+
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Precio compra</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="precio_compra"
+                        className="form-control"
+                        value={formulario.precio_compra}
+                        onChange={manejarCambio}
+                      />
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Precio venta</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="precio_venta"
+                        className="form-control"
+                        value={formulario.precio_venta}
+                        onChange={manejarCambio}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Stock actual</label>
+                      <input
+                        type="number"
+                        name="stock_actual"
+                        className="form-control"
+                        value={formulario.stock_actual}
+                        onChange={manejarCambio}
+                      />
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Stock mínimo</label>
+                      <input
+                        type="number"
+                        name="stock_minimo"
+                        className="form-control"
+                        value={formulario.stock_minimo}
+                        onChange={manejarCambio}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Fecha ingreso</label>
+                    <input
+                      type="date"
+                      name="fecha_ingreso"
+                      className="form-control"
+                      value={formulario.fecha_ingreso}
+                      onChange={manejarCambio}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Estado</label>
+                    <select
+                      name="estado"
+                      className="form-select"
+                      value={formulario.estado}
+                      onChange={manejarCambio}
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                      <option value="Agotado">Agotado</option>
+                    </select>
+                  </div>
+
+                  <div className="d-flex gap-2">
+                    <button type="submit" className="btn btn-primary">
+                      {productoEditando ? 'Actualizar' : 'Guardar'}
                     </button>
-                  )}
-                </div>
-              </form>
+
+                    {productoEditando && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={limpiarFormulario}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="col-lg-8">
+        <div className={puedeGestionar ? 'col-xl-9 col-lg-8' : 'col-12'}>
           <div className="card shadow-sm border-0">
             <div className="card-body">
               <h5 className="fw-bold mb-3">Listado de productos</h5>
 
               <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle productos-table">
                   <thead>
                     <tr>
                       <th>Producto</th>
@@ -348,7 +376,9 @@ const Productos = () => {
                       <th>Precio venta</th>
                       <th>Stock</th>
                       <th>Estado</th>
-                      <th className="text-end">Acciones</th>
+                      {puedeGestionar && (
+                        <th className="text-end acciones-tabla">Acciones</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -356,7 +386,9 @@ const Productos = () => {
                       <tr key={producto.id_producto}>
                         <td>
                           <div className="fw-semibold">{producto.nombre}</div>
-                          <small className="text-muted">{producto.marca || 'Sin marca'}</small>
+                          <small className="text-muted">
+                            {producto.marca || 'Sin marca'}
+                          </small>
                         </td>
                         <td>{producto.categoria}</td>
                         <td>{formatoMoneda(producto.precio_venta)}</td>
@@ -384,27 +416,33 @@ const Productos = () => {
                             {producto.estado}
                           </span>
                         </td>
-                        <td className="text-end">
-                          <button
-                            className="btn btn-sm btn-warning me-2"
-                            onClick={() => cargarProductoParaEditar(producto)}
-                          >
-                            Editar
-                          </button>
 
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => eliminarProducto(producto.id_producto)}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
+                        {puedeGestionar && (
+                          <td className="text-end acciones-tabla">
+                            <button
+                              className="btn btn-sm btn-warning me-2"
+                              onClick={() => cargarProductoParaEditar(producto)}
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => eliminarProducto(producto.id_producto)}
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
 
                     {productos.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="text-muted">
+                        <td
+                          colSpan={puedeGestionar ? 6 : 5}
+                          className="text-muted"
+                        >
                           No hay productos registrados.
                         </td>
                       </tr>
