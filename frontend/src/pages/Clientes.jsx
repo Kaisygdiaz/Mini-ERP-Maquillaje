@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
 import { puedeGestionarClientes } from '../utils/permisos';
 
@@ -11,6 +11,9 @@ const Clientes = () => {
   const [clientes, setClientes] = useState([]);
   const [clienteEditando, setClienteEditando] = useState(null);
   const [mensaje, setMensaje] = useState('');
+
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const puedeGestionar = puedeGestionarClientes(usuarioActual);
@@ -57,6 +60,53 @@ const Clientes = () => {
 
     setClienteEditando(null);
   };
+
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('Todos');
+  };
+
+  const obtenerClaseEstado = (estado) => {
+    if (estado === 'Activo') return 'badge bg-success';
+    return 'badge bg-secondary';
+  };
+
+  const clientesFiltrados = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+
+    return clientes.filter((cliente) => {
+      const estadoCliente = cliente.estado || 'Activo';
+
+      const coincideBusqueda =
+        !texto ||
+        cliente.nombre?.toLowerCase().includes(texto) ||
+        cliente.telefono?.toLowerCase().includes(texto) ||
+        cliente.correo?.toLowerCase().includes(texto) ||
+        cliente.direccion?.toLowerCase().includes(texto) ||
+        estadoCliente.toLowerCase().includes(texto);
+
+      const coincideEstado =
+        filtroEstado === 'Todos' || estadoCliente === filtroEstado;
+
+      return coincideBusqueda && coincideEstado;
+    });
+  }, [clientes, busqueda, filtroEstado]);
+
+  const resumenClientes = useMemo(() => {
+    const total = clientes.length;
+    const activos = clientes.filter((cliente) => (cliente.estado || 'Activo') === 'Activo').length;
+    const inactivos = clientes.filter((cliente) => cliente.estado === 'Inactivo').length;
+    const conCorreo = clientes.filter((cliente) => cliente.correo && cliente.correo.trim() !== '').length;
+    const conTelefono = clientes.filter((cliente) => cliente.telefono && cliente.telefono.trim() !== '').length;
+
+    return {
+      total,
+      activos,
+      inactivos,
+      conCorreo,
+      conTelefono
+    };
+  }, [clientes]);
 
   const guardarCliente = async (e) => {
     e.preventDefault();
@@ -152,10 +202,20 @@ const Clientes = () => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="page-title">Clientes</h2>
-        <p className="page-subtitle">
-          Administración de clientes registrados para el proceso de ventas.
-        </p>
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h2 className="page-title">Clientes</h2>
+            <p className="page-subtitle">
+              Gestión de clientes registrados para ventas, seguimiento y consultas comerciales.
+            </p>
+          </div>
+
+          <div className="text-end">
+            <span className="badge bg-light text-dark">
+              {clientesFiltrados.length} de {clientes.length} clientes
+            </span>
+          </div>
+        </div>
       </div>
 
       {mensaje && (
@@ -171,14 +231,57 @@ const Clientes = () => {
         </div>
       )}
 
+      <div className="dashboard-kpi-grid mb-4">
+        <div className="stat-card stat-card-info">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Total clientes</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenClientes.total}</div>
+          <p className="stat-card-description">Clientes registrados en el ERP</p>
+        </div>
+
+        <div className="stat-card stat-card-success">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Activos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenClientes.activos}</div>
+          <p className="stat-card-description">Clientes disponibles para ventas</p>
+        </div>
+
+        <div className="stat-card stat-card-secondary">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Inactivos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenClientes.inactivos}</div>
+          <p className="stat-card-description">Clientes conservados por historial</p>
+        </div>
+
+        <div className="stat-card stat-card-primary">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Con contacto</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenClientes.conTelefono}</div>
+          <p className="stat-card-description">Clientes con teléfono registrado</p>
+        </div>
+      </div>
+
       <div className="row g-4">
         {puedeGestionar && (
-          <div className="col-lg-4">
-            <div className="card shadow-sm border-0">
+          <div className="col-xl-3 col-lg-4">
+            <div className="card shadow-sm border-0 form-card">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">
-                  {clienteEditando ? 'Editar cliente' : 'Nuevo cliente'}
-                </h5>
+                <div className="mb-3">
+                  <h5 className="fw-bold mb-1">
+                    {clienteEditando ? 'Editar cliente' : 'Nuevo cliente'}
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    Registra los datos básicos del cliente para el proceso de ventas.
+                  </p>
+                </div>
 
                 <form onSubmit={guardarCliente}>
                   <div className="mb-3">
@@ -263,13 +366,54 @@ const Clientes = () => {
           </div>
         )}
 
-        <div className={puedeGestionar ? 'col-lg-8' : 'col-12'}>
+        <div className={puedeGestionar ? 'col-xl-9 col-lg-8' : 'col-12'}>
           <div className="card shadow-sm border-0">
             <div className="card-body">
-              <h5 className="fw-bold mb-3">Listado de clientes</h5>
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                <div>
+                  <h5 className="fw-bold mb-1">Listado de clientes</h5>
+                  <p className="text-muted small mb-0">
+                    Consulta clientes por nombre, teléfono, correo, dirección o estado.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-dark btn-sm"
+                  onClick={limpiarFiltros}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div className="row g-3 mb-4">
+                <div className="col-xl-8 col-lg-12">
+                  <label className="form-label">Buscar cliente</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar por nombre, teléfono, correo, dirección o estado"
+                  />
+                </div>
+
+                <div className="col-xl-4 col-md-6">
+                  <label className="form-label">Estado</label>
+                  <select
+                    className="form-select"
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle clientes-table">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -283,22 +427,27 @@ const Clientes = () => {
                       )}
                     </tr>
                   </thead>
+
                   <tbody>
-                    {clientes.map((cliente) => (
+                    {clientesFiltrados.map((cliente) => (
                       <tr key={cliente.id_cliente}>
                         <td>{cliente.id_cliente}</td>
-                        <td className="fw-semibold">{cliente.nombre}</td>
-                        <td>{cliente.telefono || 'Sin teléfono'}</td>
-                        <td>{cliente.correo || 'Sin correo'}</td>
-                        <td>{cliente.direccion || 'Sin dirección'}</td>
+
                         <td>
-                          <span
-                            className={
-                              cliente.estado === 'Activo'
-                                ? 'badge bg-success'
-                                : 'badge bg-secondary'
-                            }
-                          >
+                          <div className="fw-semibold">{cliente.nombre}</div>
+                          <small className="text-muted">
+                            Cliente registrado
+                          </small>
+                        </td>
+
+                        <td>{cliente.telefono || 'Sin teléfono'}</td>
+
+                        <td>{cliente.correo || 'Sin correo'}</td>
+
+                        <td>{cliente.direccion || 'Sin dirección'}</td>
+
+                        <td>
+                          <span className={obtenerClaseEstado(cliente.estado || 'Activo')}>
                             {cliente.estado || 'Activo'}
                           </span>
                         </td>
@@ -312,7 +461,7 @@ const Clientes = () => {
                               Editar
                             </button>
 
-                            {cliente.estado === 'Activo' && (
+                            {(cliente.estado || 'Activo') === 'Activo' && (
                               <button
                                 className="btn btn-sm btn-danger"
                                 onClick={() => inactivarCliente(cliente)}
@@ -334,13 +483,13 @@ const Clientes = () => {
                       </tr>
                     ))}
 
-                    {clientes.length === 0 && (
+                    {clientesFiltrados.length === 0 && (
                       <tr>
                         <td
                           colSpan={puedeGestionar ? 7 : 6}
                           className="text-muted"
                         >
-                          No hay clientes registrados.
+                          No se encontraron clientes con los filtros aplicados.
                         </td>
                       </tr>
                     )}
