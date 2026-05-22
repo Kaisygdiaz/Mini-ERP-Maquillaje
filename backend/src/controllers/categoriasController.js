@@ -1,5 +1,9 @@
 const pool = require('../db/conexion');
 
+/*
+  Controlador para obtener todas las categorías registradas.
+  Se ordenan de forma descendente para mostrar primero las más recientes.
+*/
 const obtenerCategorias = async (req, res) => {
   try {
     const [categorias] = await pool.query(
@@ -15,6 +19,7 @@ const obtenerCategorias = async (req, res) => {
     });
   }
 };
+
 
 const obtenerCategoriaPorId = async (req, res) => {
   try {
@@ -41,6 +46,10 @@ const obtenerCategoriaPorId = async (req, res) => {
   }
 };
 
+/*
+  Controlador para crear una nueva categoría.
+  Se crea por defecto en estado Activo.
+*/
 const crearCategoria = async (req, res) => {
   try {
     const { nombre, descripcion, estado } = req.body;
@@ -52,8 +61,10 @@ const crearCategoria = async (req, res) => {
     }
 
     const [resultado] = await pool.query(
-      `INSERT INTO categorias (nombre, descripcion, estado)
-       VALUES (?, ?, ?)`,
+      `
+      INSERT INTO categorias (nombre, descripcion, estado)
+      VALUES (?, ?, ?)
+      `,
       [nombre, descripcion || null, estado || 'Activo']
     );
 
@@ -70,6 +81,9 @@ const crearCategoria = async (req, res) => {
   }
 };
 
+/*
+  Controlador para actualizar una categoría existente.
+*/
 const actualizarCategoria = async (req, res) => {
   try {
     const { id } = req.params;
@@ -82,9 +96,11 @@ const actualizarCategoria = async (req, res) => {
     }
 
     const [resultado] = await pool.query(
-      `UPDATE categorias
-       SET nombre = ?, descripcion = ?, estado = ?
-       WHERE id_categoria = ?`,
+      `
+      UPDATE categorias
+      SET nombre = ?, descripcion = ?, estado = ?
+      WHERE id_categoria = ?
+      `,
       [nombre, descripcion || null, estado || 'Activo', id]
     );
 
@@ -106,6 +122,79 @@ const actualizarCategoria = async (req, res) => {
   }
 };
 
+/*
+  Controlador para inactivar una categoría.
+  En un ERP real no se elimina si puede estar relacionada con productos.
+*/
+const inactivarCategoria = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [resultado] = await pool.query(
+      `
+      UPDATE categorias
+      SET estado = 'Inactivo'
+      WHERE id_categoria = ?
+      `,
+      [id]
+    );
+
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({
+        mensaje: 'Categoría no encontrada'
+      });
+    }
+
+    res.json({
+      mensaje: 'Categoría inactivada correctamente'
+    });
+  } catch (error) {
+    console.error('Error al inactivar categoría:', error);
+    res.status(500).json({
+      mensaje: 'Error al inactivar la categoría',
+      error: error.message
+    });
+  }
+};
+
+/*
+  Controlador para activar una categoría.
+*/
+const activarCategoria = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [resultado] = await pool.query(
+      `
+      UPDATE categorias
+      SET estado = 'Activo'
+      WHERE id_categoria = ?
+      `,
+      [id]
+    );
+
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({
+        mensaje: 'Categoría no encontrada'
+      });
+    }
+
+    res.json({
+      mensaje: 'Categoría activada correctamente'
+    });
+  } catch (error) {
+    console.error('Error al activar categoría:', error);
+    res.status(500).json({
+      mensaje: 'Error al activar la categoría',
+      error: error.message
+    });
+  }
+};
+
+/*
+  Controlador para eliminar físicamente una categoría.
+  Se conserva como respaldo técnico, pero no se recomienda usarlo en la interfaz principal.
+*/
 const eliminarCategoria = async (req, res) => {
   try {
     const { id } = req.params;
@@ -138,5 +227,7 @@ module.exports = {
   obtenerCategoriaPorId,
   crearCategoria,
   actualizarCategoria,
+  inactivarCategoria,
+  activarCategoria,
   eliminarCategoria
 };
