@@ -1,15 +1,14 @@
-/*
-  Componente reutilizable para mostrar indicadores del dashboard.
-  Recibe título, valor y descripción.
-*/
-const StatCard = ({ titulo, valor, descripcion }) => {
+const StatCard = ({ titulo, valor, descripcion, variant = 'default' }) => {
   return (
-    <div className="card shadow-sm border-0 h-100">
-      <div className="card-body">
-        <p className="text-muted mb-1">{titulo}</p>
-        <h3 className="fw-bold mb-1">{valor}</h3>
-        <small className="text-muted">{descripcion}</small>
+    <div className={`stat-card stat-card-${variant}`}>
+      <div className="stat-card-top">
+        <span className="stat-card-label">{titulo}</span>
+        <span className="stat-card-accent"></span>
       </div>
+
+      <div className="stat-card-value">{valor}</div>
+
+      <p className="stat-card-description">{descripcion}</p>
     </div>
   );
 };

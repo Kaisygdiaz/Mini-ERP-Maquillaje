@@ -65,28 +65,28 @@ const obtenerResumenDashboard = async (req, res) => {
     `);
 
     res.json({
-      total_productos: productos.total_productos,
+      total_productos: productos.total_productos || 0,
       productos_activos: productos.productos_activos || 0,
       productos_inactivos: productos.productos_inactivos || 0,
       productos_agotados: productos.productos_agotados || 0,
 
-      total_clientes: clientes.total_clientes,
+      total_clientes: clientes.total_clientes || 0,
       clientes_activos: clientes.clientes_activos || 0,
       clientes_inactivos: clientes.clientes_inactivos || 0,
 
-      total_ventas: ventasCompletadas.total_ventas,
-      ingresos_totales: ventasCompletadas.ingresos_totales,
+      total_ventas: ventasCompletadas.total_ventas || 0,
+      ingresos_totales: ventasCompletadas.ingresos_totales || 0,
 
-      ventas_anuladas: ventasAnuladas.ventas_anuladas,
-      total_anulado: ventasAnuladas.total_anulado,
+      ventas_anuladas: ventasAnuladas.ventas_anuladas || 0,
+      total_anulado: ventasAnuladas.total_anulado || 0,
 
-      ventas_mes_actual: ventasMesActual.ventas_mes_actual,
-      ingresos_mes_actual: ventasMesActual.ingresos_mes_actual,
+      ventas_mes_actual: ventasMesActual.ventas_mes_actual || 0,
+      ingresos_mes_actual: ventasMesActual.ingresos_mes_actual || 0,
 
-      valor_inventario_compra: inventario.valor_inventario_compra,
-      valor_inventario_venta: inventario.valor_inventario_venta,
+      valor_inventario_compra: inventario.valor_inventario_compra || 0,
+      valor_inventario_venta: inventario.valor_inventario_venta || 0,
 
-      productos_stock_bajo: stockBajo.productos_stock_bajo
+      productos_stock_bajo: stockBajo.productos_stock_bajo || 0
     });
   } catch (error) {
     console.error('Error al obtener resumen del dashboard:', error);
@@ -100,7 +100,6 @@ const obtenerResumenDashboard = async (req, res) => {
 
 /*
   Controlador para obtener los productos con bajo stock.
-  Ayuda a la gerencia a identificar productos que necesitan reposición.
 */
 const obtenerProductosStockBajo = async (req, res) => {
   try {
@@ -131,7 +130,6 @@ const obtenerProductosStockBajo = async (req, res) => {
 
 /*
   Controlador para obtener los productos más vendidos.
-  Permite identificar qué productos tienen mayor demanda.
 */
 const obtenerProductosMasVendidos = async (req, res) => {
   try {
@@ -165,7 +163,6 @@ const obtenerProductosMasVendidos = async (req, res) => {
 
 /*
   Controlador para obtener ventas agrupadas por categoría.
-  Sirve para comparar qué línea del negocio genera más movimiento.
 */
 const obtenerVentasPorCategoria = async (req, res) => {
   try {
@@ -196,7 +193,6 @@ const obtenerVentasPorCategoria = async (req, res) => {
 
 /*
   Controlador para obtener ventas por mes.
-  Permite analizar temporadas con mayor o menor venta.
 */
 const obtenerVentasPorMes = async (req, res) => {
   try {
@@ -225,7 +221,6 @@ const obtenerVentasPorMes = async (req, res) => {
 
 /*
   Controlador para obtener productos sugeridos para promoción.
-  El criterio usado es: productos activos con stock alto y pocas o ninguna venta.
 */
 const obtenerProductosSugeridosPromocion = async (req, res) => {
   try {
@@ -237,11 +232,11 @@ const obtenerProductosSugeridosPromocion = async (req, res) => {
         p.stock_actual,
         p.stock_minimo,
         p.precio_venta,
-        COALESCE(SUM(dv.cantidad), 0) AS unidades_vendidas
+        COALESCE(SUM(CASE WHEN v.estado = 'Completada' THEN dv.cantidad ELSE 0 END), 0) AS unidades_vendidas
       FROM productos p
       INNER JOIN categorias c ON p.id_categoria = c.id_categoria
       LEFT JOIN detalle_ventas dv ON p.id_producto = dv.id_producto
-      LEFT JOIN ventas v ON dv.id_venta = v.id_venta AND v.estado = 'Completada'
+      LEFT JOIN ventas v ON dv.id_venta = v.id_venta
       WHERE p.estado = 'Activo'
       GROUP BY 
         p.id_producto,
@@ -267,11 +262,182 @@ const obtenerProductosSugeridosPromocion = async (req, res) => {
   }
 };
 
+/*
+  Controlador para obtener ventas agrupadas por vendedor.
+  Permite comparar el rendimiento de cada usuario que registra ventas.
+*/
+const obtenerVentasPorVendedor = async (req, res) => {
+  try {
+    const [vendedores] = await pool.query(`
+      SELECT
+        u.id_usuario,
+        u.nombre AS vendedor,
+        COUNT(v.id_venta) AS cantidad_ventas,
+        COALESCE(SUM(v.total), 0) AS total_vendido
+      FROM ventas v
+      INNER JOIN usuarios u ON v.id_usuario = u.id_usuario
+      WHERE v.estado = 'Completada'
+      GROUP BY u.id_usuario, u.nombre
+      ORDER BY total_vendido DESC
+    `);
+
+    res.json(vendedores);
+  } catch (error) {
+    console.error('Error al obtener ventas por vendedor:', error);
+
+    res.status(500).json({
+      mensaje: 'Error al obtener ventas por vendedor',
+      error: error.message
+    });
+  }
+};
+
+/*
+  Controlador para obtener ventas agrupadas por estado.
+  Permite comparar ventas completadas contra ventas anuladas.
+*/
+const obtenerVentasPorEstado = async (req, res) => {
+  try {
+    const [estados] = await pool.query(`
+      SELECT
+        estado,
+        COUNT(id_venta) AS cantidad_ventas,
+        COALESCE(SUM(total), 0) AS total_ventas
+      FROM ventas
+      GROUP BY estado
+      ORDER BY cantidad_ventas DESC
+    `);
+
+    res.json(estados);
+  } catch (error) {
+    console.error('Error al obtener ventas por estado:', error);
+
+    res.status(500).json({
+      mensaje: 'Error al obtener ventas por estado',
+      error: error.message
+    });
+  }
+};
+
+/*
+  Controlador para obtener los días con más ventas realizadas.
+  Toma únicamente ventas completadas para medir días reales de venta.
+*/
+const obtenerDiasConMasVentas = async (req, res) => {
+  try {
+    const [dias] = await pool.query(`
+      SELECT
+        DATE(fecha_venta) AS fecha,
+        DATE_FORMAT(fecha_venta, '%d/%m/%Y') AS dia,
+        COUNT(id_venta) AS cantidad_ventas,
+        COALESCE(SUM(total), 0) AS total_vendido
+      FROM ventas
+      WHERE estado = 'Completada'
+      GROUP BY DATE(fecha_venta), DATE_FORMAT(fecha_venta, '%d/%m/%Y')
+      ORDER BY cantidad_ventas DESC, total_vendido DESC
+      LIMIT 7
+    `);
+
+    res.json(dias);
+  } catch (error) {
+    console.error('Error al obtener días con más ventas:', error);
+
+    res.status(500).json({
+      mensaje: 'Error al obtener días con más ventas',
+      error: error.message
+    });
+  }
+};
+
+/*
+  Controlador para relacionar ventas e inventario.
+  Compara unidades vendidas contra stock actual para apoyar decisiones gerenciales.
+*/
+const obtenerRelacionVentasInventario = async (req, res) => {
+  try {
+    const [productos] = await pool.query(`
+      SELECT
+        p.id_producto,
+        p.nombre,
+        c.nombre AS categoria,
+        p.stock_actual,
+        p.stock_minimo,
+        p.precio_venta,
+        COALESCE(SUM(CASE WHEN v.estado = 'Completada' THEN dv.cantidad ELSE 0 END), 0) AS unidades_vendidas,
+        COALESCE(SUM(CASE WHEN v.estado = 'Completada' THEN dv.subtotal ELSE 0 END), 0) AS total_vendido
+      FROM productos p
+      INNER JOIN categorias c ON p.id_categoria = c.id_categoria
+      LEFT JOIN detalle_ventas dv ON p.id_producto = dv.id_producto
+      LEFT JOIN ventas v ON dv.id_venta = v.id_venta
+      WHERE p.estado IN ('Activo', 'Agotado')
+      GROUP BY
+        p.id_producto,
+        p.nombre,
+        c.nombre,
+        p.stock_actual,
+        p.stock_minimo,
+        p.precio_venta
+      ORDER BY unidades_vendidas DESC, p.stock_actual ASC
+      LIMIT 10
+    `);
+
+    const resultado = productos.map((producto) => {
+      const stockActual = Number(producto.stock_actual || 0);
+      const stockMinimo = Number(producto.stock_minimo || 0);
+      const unidadesVendidas = Number(producto.unidades_vendidas || 0);
+
+      let situacion = 'Estable';
+      let recomendacion = 'Mantener seguimiento normal';
+
+      if (unidadesVendidas >= 5 && stockActual <= stockMinimo) {
+        situacion = 'Alta demanda y bajo stock';
+        recomendacion = 'Reponer inventario';
+      } else if (unidadesVendidas <= 2 && stockActual > stockMinimo * 3) {
+        situacion = 'Baja rotación y alto stock';
+        recomendacion = 'Aplicar promoción';
+      } else if (unidadesVendidas >= 5 && stockActual > stockMinimo) {
+        situacion = 'Buena rotación';
+        recomendacion = 'Mantener disponibilidad';
+      } else if (unidadesVendidas === 0 && stockActual > 0) {
+        situacion = 'Sin movimiento';
+        recomendacion = 'Revisar precio o promoción';
+      } else if (stockActual === 0) {
+        situacion = 'Agotado';
+        recomendacion = 'Evaluar reposición';
+      }
+
+      return {
+        ...producto,
+        stock_actual: stockActual,
+        stock_minimo: stockMinimo,
+        precio_venta: Number(producto.precio_venta || 0),
+        unidades_vendidas: unidadesVendidas,
+        total_vendido: Number(producto.total_vendido || 0),
+        situacion,
+        recomendacion
+      };
+    });
+
+    res.json(resultado);
+  } catch (error) {
+    console.error('Error al obtener relación ventas e inventario:', error);
+
+    res.status(500).json({
+      mensaje: 'Error al obtener relación ventas e inventario',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   obtenerResumenDashboard,
   obtenerProductosStockBajo,
   obtenerProductosMasVendidos,
   obtenerVentasPorCategoria,
   obtenerVentasPorMes,
-  obtenerProductosSugeridosPromocion
+  obtenerProductosSugeridosPromocion,
+  obtenerVentasPorVendedor,
+  obtenerVentasPorEstado,
+  obtenerDiasConMasVentas,
+  obtenerRelacionVentasInventario
 };
