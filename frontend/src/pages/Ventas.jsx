@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
 
 import {
@@ -19,6 +19,10 @@ const Ventas = () => {
   const [detalleVenta, setDetalleVenta] = useState([]);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
   const [mensaje, setMensaje] = useState('');
+
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [filtroMetodo, setFiltroMetodo] = useState('Todos');
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
 
@@ -89,6 +93,17 @@ const Ventas = () => {
       style: 'currency',
       currency: 'GTQ'
     });
+  };
+
+  const obtenerClaseEstado = (estado) => {
+    if (estado === 'Completada') return 'badge bg-success';
+    return 'badge bg-danger';
+  };
+
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('Todos');
+    setFiltroMetodo('Todos');
   };
 
   const agregarProductoDetalle = () => {
@@ -181,6 +196,61 @@ const Ventas = () => {
     0
   );
 
+  const ventasFiltradas = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+
+    return ventas.filter((venta) => {
+      const totalTexto = formatoMoneda(venta.total).toLowerCase();
+
+      const coincideBusqueda =
+        !texto ||
+        String(venta.id_venta).includes(texto) ||
+        venta.cliente?.toLowerCase().includes(texto) ||
+        venta.usuario?.toLowerCase().includes(texto) ||
+        venta.metodo_pago?.toLowerCase().includes(texto) ||
+        venta.estado?.toLowerCase().includes(texto) ||
+        totalTexto.includes(texto);
+
+      const coincideEstado =
+        filtroEstado === 'Todos' || venta.estado === filtroEstado;
+
+      const coincideMetodo =
+        filtroMetodo === 'Todos' || venta.metodo_pago === filtroMetodo;
+
+      return coincideBusqueda && coincideEstado && coincideMetodo;
+    });
+  }, [ventas, busqueda, filtroEstado, filtroMetodo]);
+
+  const resumenVentas = useMemo(() => {
+    const totalVentas = ventas.length;
+
+    const completadas = ventas.filter(
+      (venta) => venta.estado === 'Completada'
+    );
+
+    const anuladas = ventas.filter(
+      (venta) => venta.estado === 'Anulada'
+    );
+
+    const ingresosCompletados = completadas.reduce(
+      (total, venta) => total + Number(venta.total || 0),
+      0
+    );
+
+    const totalAnulado = anuladas.reduce(
+      (total, venta) => total + Number(venta.total || 0),
+      0
+    );
+
+    return {
+      totalVentas,
+      completadas: completadas.length,
+      anuladas: anuladas.length,
+      ingresosCompletados,
+      totalAnulado
+    };
+  }, [ventas]);
+
   const registrarVenta = async (e) => {
     e.preventDefault();
 
@@ -262,10 +332,20 @@ const Ventas = () => {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="page-title">Ventas</h2>
-        <p className="page-subtitle">
-          Registro de ventas, control de productos vendidos y actualización automática del inventario.
-        </p>
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h2 className="page-title">Ventas</h2>
+            <p className="page-subtitle">
+              Registro de ventas, control de productos vendidos y actualización automática del inventario.
+            </p>
+          </div>
+
+          <div className="text-end">
+            <span className="badge bg-light text-dark">
+              {ventasFiltradas.length} de {ventas.length} ventas
+            </span>
+          </div>
+        </div>
       </div>
 
       {mensaje && (
@@ -281,12 +361,59 @@ const Ventas = () => {
         </div>
       )}
 
+      <div className="dashboard-kpi-grid mb-4">
+        <div className="stat-card stat-card-info">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Total ventas</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenVentas.totalVentas}</div>
+          <p className="stat-card-description">Ventas registradas en el sistema</p>
+        </div>
+
+        <div className="stat-card stat-card-success">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Completadas</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenVentas.completadas}</div>
+          <p className="stat-card-description">Operaciones efectivas</p>
+        </div>
+
+        <div className="stat-card stat-card-primary">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Ingresos</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">
+            {formatoMoneda(resumenVentas.ingresosCompletados)}
+          </div>
+          <p className="stat-card-description">Total de ventas completadas</p>
+        </div>
+
+        <div className="stat-card stat-card-danger">
+          <div className="stat-card-top">
+            <span className="stat-card-label">Anuladas</span>
+            <span className="stat-card-accent"></span>
+          </div>
+          <div className="stat-card-value">{resumenVentas.anuladas}</div>
+          <p className="stat-card-description">
+            {formatoMoneda(resumenVentas.totalAnulado)} anulados
+          </p>
+        </div>
+      </div>
+
       <div className="row g-4">
         {puedeRegistrar && (
           <div className="col-xl-4 col-lg-5">
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0 mb-4 form-card">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">Nueva venta</h5>
+                <div className="mb-3">
+                  <h5 className="fw-bold mb-1">Nueva venta</h5>
+                  <p className="text-muted small mb-0">
+                    Selecciona cliente, método de pago y productos a vender.
+                  </p>
+                </div>
 
                 <form onSubmit={registrarVenta}>
                   <div className="mb-3">
@@ -420,10 +547,65 @@ const Ventas = () => {
         <div className={puedeRegistrar ? 'col-xl-8 col-lg-7' : 'col-12'}>
           <div className="card shadow-sm border-0 mb-4">
             <div className="card-body">
-              <h5 className="fw-bold mb-3">Historial de ventas</h5>
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                <div>
+                  <h5 className="fw-bold mb-1">Historial de ventas</h5>
+                  <p className="text-muted small mb-0">
+                    Consulta ventas por cliente, usuario, estado, método de pago o total.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-dark btn-sm"
+                  onClick={limpiarFiltros}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div className="row g-3 mb-4">
+                <div className="col-xl-5 col-lg-12">
+                  <label className="form-label">Buscar venta</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar por ID, cliente, usuario, método o estado"
+                  />
+                </div>
+
+                <div className="col-xl-3 col-md-6">
+                  <label className="form-label">Estado</label>
+                  <select
+                    className="form-select"
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Completada">Completada</option>
+                    <option value="Anulada">Anulada</option>
+                  </select>
+                </div>
+
+                <div className="col-xl-4 col-md-6">
+                  <label className="form-label">Método de pago</label>
+                  <select
+                    className="form-select"
+                    value={filtroMetodo}
+                    onChange={(e) => setFiltroMetodo(e.target.value)}
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Transferencia">Transferencia</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle ventas-table">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -435,25 +617,33 @@ const Ventas = () => {
                       <th className="text-end acciones-tabla">Acciones</th>
                     </tr>
                   </thead>
+
                   <tbody>
-                    {ventas.map((venta) => (
+                    {ventasFiltradas.map((venta) => (
                       <tr key={venta.id_venta}>
                         <td>{venta.id_venta}</td>
-                        <td>{venta.cliente || 'Sin cliente'}</td>
-                        <td>{venta.usuario}</td>
-                        <td>{formatoMoneda(venta.total)}</td>
-                        <td>{venta.metodo_pago}</td>
+
                         <td>
-                          <span
-                            className={
-                              venta.estado === 'Completada'
-                                ? 'badge bg-success'
-                                : 'badge bg-danger'
-                            }
-                          >
+                          <div className="fw-semibold">
+                            {venta.cliente || 'Sin cliente'}
+                          </div>
+                          <small className="text-muted">
+                            Venta registrada
+                          </small>
+                        </td>
+
+                        <td>{venta.usuario}</td>
+
+                        <td>{formatoMoneda(venta.total)}</td>
+
+                        <td>{venta.metodo_pago}</td>
+
+                        <td>
+                          <span className={obtenerClaseEstado(venta.estado)}>
                             {venta.estado}
                           </span>
                         </td>
+
                         <td className="text-end acciones-tabla">
                           <button
                             className="btn btn-sm btn-info me-2"
@@ -474,10 +664,10 @@ const Ventas = () => {
                       </tr>
                     ))}
 
-                    {ventas.length === 0 && (
+                    {ventasFiltradas.length === 0 && (
                       <tr>
                         <td colSpan="7" className="text-muted">
-                          No hay ventas registradas.
+                          No se encontraron ventas con los filtros aplicados.
                         </td>
                       </tr>
                     )}
@@ -491,29 +681,49 @@ const Ventas = () => {
           {ventaSeleccionada && (
             <div className="card shadow-sm border-0">
               <div className="card-body">
-                <h5 className="fw-bold mb-3">
-                  Detalle de venta No. {ventaSeleccionada.venta.id_venta}
-                </h5>
+                <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                  <div>
+                    <h5 className="fw-bold mb-1">
+                      Detalle de venta No. {ventaSeleccionada.venta.id_venta}
+                    </h5>
+                    <p className="text-muted small mb-0">
+                      Productos incluidos en la operación seleccionada.
+                    </p>
+                  </div>
 
-                <div className="row mb-3">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setVentaSeleccionada(null)}
+                  >
+                    Cerrar detalle
+                  </button>
+                </div>
+
+                <div className="row g-3 mb-3">
                   <div className="col-md-4">
-                    <small className="text-muted">Cliente</small>
-                    <div className="fw-semibold">
-                      {ventaSeleccionada.venta.cliente || 'Sin cliente'}
+                    <div className="alert alert-light border py-2 mb-0">
+                      <small className="text-muted">Cliente</small>
+                      <div className="fw-semibold">
+                        {ventaSeleccionada.venta.cliente || 'Sin cliente'}
+                      </div>
                     </div>
                   </div>
 
                   <div className="col-md-4">
-                    <small className="text-muted">Usuario</small>
-                    <div className="fw-semibold">
-                      {ventaSeleccionada.venta.usuario}
+                    <div className="alert alert-light border py-2 mb-0">
+                      <small className="text-muted">Usuario</small>
+                      <div className="fw-semibold">
+                        {ventaSeleccionada.venta.usuario}
+                      </div>
                     </div>
                   </div>
 
                   <div className="col-md-4">
-                    <small className="text-muted">Total</small>
-                    <div className="fw-semibold">
-                      {formatoMoneda(ventaSeleccionada.venta.total)}
+                    <div className="alert alert-light border py-2 mb-0">
+                      <small className="text-muted">Total</small>
+                      <div className="fw-semibold">
+                        {formatoMoneda(ventaSeleccionada.venta.total)}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -528,6 +738,7 @@ const Ventas = () => {
                         <th>Subtotal</th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {ventaSeleccionada.detalle.map((item) => (
                         <tr key={item.id_detalle}>
@@ -540,13 +751,6 @@ const Ventas = () => {
                     </tbody>
                   </table>
                 </div>
-
-                <button
-                  className="btn btn-secondary mt-2"
-                  onClick={() => setVentaSeleccionada(null)}
-                >
-                  Cerrar detalle
-                </button>
               </div>
             </div>
           )}
