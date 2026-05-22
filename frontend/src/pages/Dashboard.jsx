@@ -40,43 +40,62 @@ const Dashboard = () => {
         api.get('/dashboard/stock-bajo')
       ]);
 
-      setResumen(resumenRes.data);
+      setResumen({
+        total_productos: Number(resumenRes.data.total_productos || 0),
+        productos_activos: Number(resumenRes.data.productos_activos || 0),
+        productos_inactivos: Number(resumenRes.data.productos_inactivos || 0),
+        productos_agotados: Number(resumenRes.data.productos_agotados || 0),
 
-      /*
-        MySQL puede devolver valores DECIMAL como texto.
-        Por eso se convierten a número antes de enviarlos a las gráficas.
-      */
+        total_clientes: Number(resumenRes.data.total_clientes || 0),
+        clientes_activos: Number(resumenRes.data.clientes_activos || 0),
+        clientes_inactivos: Number(resumenRes.data.clientes_inactivos || 0),
+
+        total_ventas: Number(resumenRes.data.total_ventas || 0),
+        ingresos_totales: Number(resumenRes.data.ingresos_totales || 0),
+
+        ventas_anuladas: Number(resumenRes.data.ventas_anuladas || 0),
+        total_anulado: Number(resumenRes.data.total_anulado || 0),
+
+        ventas_mes_actual: Number(resumenRes.data.ventas_mes_actual || 0),
+        ingresos_mes_actual: Number(resumenRes.data.ingresos_mes_actual || 0),
+
+        valor_inventario_compra: Number(resumenRes.data.valor_inventario_compra || 0),
+        valor_inventario_venta: Number(resumenRes.data.valor_inventario_venta || 0),
+
+        productos_stock_bajo: Number(resumenRes.data.productos_stock_bajo || 0)
+      });
+
       setProductosMasVendidos(
         masVendidosRes.data.map((item) => ({
           ...item,
-          unidades_vendidas: Number(item.unidades_vendidas),
-          total_generado: Number(item.total_generado)
+          unidades_vendidas: Number(item.unidades_vendidas || 0),
+          total_generado: Number(item.total_generado || 0)
         }))
       );
 
       setVentasPorCategoria(
         categoriaRes.data.map((item) => ({
           ...item,
-          total_vendido: Number(item.total_vendido),
-          unidades_vendidas: Number(item.unidades_vendidas)
+          total_vendido: Number(item.total_vendido || 0),
+          unidades_vendidas: Number(item.unidades_vendidas || 0)
         }))
       );
 
       setProductosPromocion(
         promocionRes.data.map((item) => ({
           ...item,
-          stock_actual: Number(item.stock_actual),
-          stock_minimo: Number(item.stock_minimo),
-          precio_venta: Number(item.precio_venta),
-          unidades_vendidas: Number(item.unidades_vendidas)
+          stock_actual: Number(item.stock_actual || 0),
+          stock_minimo: Number(item.stock_minimo || 0),
+          precio_venta: Number(item.precio_venta || 0),
+          unidades_vendidas: Number(item.unidades_vendidas || 0)
         }))
       );
 
       setStockBajo(
         stockBajoRes.data.map((item) => ({
           ...item,
-          stock_actual: Number(item.stock_actual),
-          stock_minimo: Number(item.stock_minimo)
+          stock_actual: Number(item.stock_actual || 0),
+          stock_minimo: Number(item.stock_minimo || 0)
         }))
       );
     } catch (error) {
@@ -97,6 +116,10 @@ const Dashboard = () => {
     });
   };
 
+  const formatoTooltipMoneda = (value) => {
+    return formatoMoneda(value);
+  };
+
   return (
     <div>
       <div className="mb-4">
@@ -109,9 +132,43 @@ const Dashboard = () => {
       <div className="row g-4 mb-4">
         <div className="col-md-3">
           <StatCard
+            titulo="Ingresos totales"
+            valor={formatoMoneda(resumen?.ingresos_totales)}
+            descripcion="Ventas completadas acumuladas"
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Ingresos del mes"
+            valor={formatoMoneda(resumen?.ingresos_mes_actual)}
+            descripcion={`${resumen?.ventas_mes_actual || 0} ventas completadas este mes`}
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Ventas completadas"
+            valor={resumen?.total_ventas || 0}
+            descripcion="Operaciones confirmadas"
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Ventas anuladas"
+            valor={resumen?.ventas_anuladas || 0}
+            descripcion={`${formatoMoneda(resumen?.total_anulado)} anulados`}
+          />
+        </div>
+      </div>
+
+      <div className="row g-4 mb-4">
+        <div className="col-md-3">
+          <StatCard
             titulo="Productos"
             valor={resumen?.total_productos || 0}
-            descripcion="Productos registrados"
+            descripcion={`${resumen?.productos_activos || 0} activos, ${resumen?.productos_agotados || 0} agotados`}
           />
         </div>
 
@@ -119,23 +176,57 @@ const Dashboard = () => {
           <StatCard
             titulo="Clientes"
             valor={resumen?.total_clientes || 0}
-            descripcion="Clientes registrados"
+            descripcion={`${resumen?.clientes_activos || 0} activos, ${resumen?.clientes_inactivos || 0} inactivos`}
           />
         </div>
 
         <div className="col-md-3">
           <StatCard
-            titulo="Ventas"
-            valor={resumen?.total_ventas || 0}
-            descripcion="Ventas completadas"
+            titulo="Inventario compra"
+            valor={formatoMoneda(resumen?.valor_inventario_compra)}
+            descripcion="Costo estimado del stock actual"
           />
         </div>
 
         <div className="col-md-3">
           <StatCard
-            titulo="Ingresos"
-            valor={formatoMoneda(resumen?.ingresos_totales)}
-            descripcion="Total vendido"
+            titulo="Inventario venta"
+            valor={formatoMoneda(resumen?.valor_inventario_venta)}
+            descripcion="Valor potencial de venta"
+          />
+        </div>
+      </div>
+
+      <div className="row g-4 mb-4">
+        <div className="col-md-3">
+          <StatCard
+            titulo="Stock bajo"
+            valor={resumen?.productos_stock_bajo || 0}
+            descripcion="Productos que requieren revisión"
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Productos inactivos"
+            valor={resumen?.productos_inactivos || 0}
+            descripcion="No disponibles para venta"
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Productos agotados"
+            valor={resumen?.productos_agotados || 0}
+            descripcion="Requieren reposición"
+          />
+        </div>
+
+        <div className="col-md-3">
+          <StatCard
+            titulo="Clientes inactivos"
+            valor={resumen?.clientes_inactivos || 0}
+            descripcion="Clientes conservados por historial"
           />
         </div>
       </div>
@@ -182,7 +273,7 @@ const Dashboard = () => {
                         outerRadius={100}
                         label
                       />
-                      <Tooltip formatter={(value) => formatoMoneda(value)} />
+                      <Tooltip formatter={formatoTooltipMoneda} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -257,7 +348,11 @@ const Dashboard = () => {
                       <tr key={producto.id_producto}>
                         <td>{producto.nombre}</td>
                         <td>{producto.categoria}</td>
-                        <td>{producto.stock_actual}</td>
+                        <td>
+                          <span className="badge bg-danger">
+                            {producto.stock_actual}
+                          </span>
+                        </td>
                         <td>{producto.stock_minimo}</td>
                       </tr>
                     ))}

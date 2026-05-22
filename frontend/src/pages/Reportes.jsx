@@ -3,7 +3,7 @@ import api from '../api/axiosConfig';
 
 /*
   Página de reportes gerenciales.
-  Permite consultar ventas con filtros y analizar resultados por método de pago.
+  Permite consultar ventas con filtros, imprimir el reporte y exportar datos a CSV.
 */
 const Reportes = () => {
   const [ventas, setVentas] = useState([]);
@@ -11,6 +11,8 @@ const Reportes = () => {
   const [ventasMetodoPago, setVentasMetodoPago] = useState([]);
   const [ventasClientes, setVentasClientes] = useState([]);
   const [mensaje, setMensaje] = useState('');
+
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
 
   const [filtros, setFiltros] = useState({
     fecha_inicio: '',
@@ -35,6 +37,37 @@ const Reportes = () => {
       dateStyle: 'short',
       timeStyle: 'short'
     });
+  };
+
+  const fechaGeneracion = () => {
+    return new Date().toLocaleString('es-GT', {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+  };
+
+  const obtenerTextoFiltros = () => {
+    const filtrosAplicados = [];
+
+    if (filtros.fecha_inicio) {
+      filtrosAplicados.push(`Fecha inicio: ${filtros.fecha_inicio}`);
+    }
+
+    if (filtros.fecha_fin) {
+      filtrosAplicados.push(`Fecha fin: ${filtros.fecha_fin}`);
+    }
+
+    if (filtros.estado) {
+      filtrosAplicados.push(`Estado: ${filtros.estado}`);
+    }
+
+    if (filtros.metodo_pago) {
+      filtrosAplicados.push(`Método de pago: ${filtros.metodo_pago}`);
+    }
+
+    return filtrosAplicados.length > 0
+      ? filtrosAplicados.join(' | ')
+      : 'Sin filtros aplicados';
   };
 
   const obtenerReporteVentas = async () => {
@@ -123,6 +156,59 @@ const Reportes = () => {
     obtenerReporteVentas();
   };
 
+  const imprimirReporte = () => {
+    window.print();
+  };
+
+  const exportarCSV = () => {
+    if (ventas.length === 0) {
+      setMensaje('No hay ventas para exportar');
+      return;
+    }
+
+    const encabezados = [
+      'ID',
+      'Fecha',
+      'Cliente',
+      'Usuario',
+      'Metodo de pago',
+      'Estado',
+      'Total'
+    ];
+
+    const filas = ventas.map((venta) => [
+      venta.id_venta,
+      formatoFecha(venta.fecha_venta),
+      venta.cliente || 'Sin cliente',
+      venta.usuario,
+      venta.metodo_pago,
+      venta.estado,
+      venta.total
+    ]);
+
+    const contenidoCSV = [
+      encabezados.join(','),
+      ...filas.map((fila) =>
+        fila
+          .map((valor) => `"${String(valor).replace(/"/g, '""')}"`)
+          .join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([contenidoCSV], {
+      type: 'text/csv;charset=utf-8;'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+
+    enlace.href = url;
+    enlace.download = 'reporte_ventas.csv';
+    enlace.click();
+
+    URL.revokeObjectURL(url);
+  };
+
   const limpiarFiltros = () => {
     const filtrosLimpios = {
       fecha_inicio: '',
@@ -140,7 +226,15 @@ const Reportes = () => {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="print-header">
+        <h1>Reporte de Ventas - Beauty ERP</h1>
+        <p>Sistema de ventas e inventario</p>
+        <p><strong>Fecha de generación:</strong> {fechaGeneracion()}</p>
+        <p><strong>Usuario:</strong> {usuarioActual?.nombre || 'Usuario del sistema'}</p>
+        <p><strong>Filtros aplicados:</strong> {obtenerTextoFiltros()}</p>
+      </div>
+
+      <div className="mb-4 no-print">
         <h2 className="page-title">Reportes</h2>
         <p className="page-subtitle">
           Consulta gerencial de ventas, estados, métodos de pago y clientes con mayor compra.
@@ -148,12 +242,12 @@ const Reportes = () => {
       </div>
 
       {mensaje && (
-        <div className="alert alert-info py-2">
+        <div className="alert alert-info py-2 no-print">
           {mensaje}
         </div>
       )}
 
-      <div className="card shadow-sm border-0 mb-4">
+      <div className="card shadow-sm border-0 mb-4 no-print">
         <div className="card-body">
           <h5 className="fw-bold mb-3">Filtros de ventas</h5>
 
@@ -211,7 +305,7 @@ const Reportes = () => {
               </div>
             </div>
 
-            <div className="mt-3 d-flex gap-2">
+            <div className="mt-3 d-flex flex-wrap gap-2">
               <button type="submit" className="btn btn-primary">
                 Aplicar filtros
               </button>
@@ -223,14 +317,30 @@ const Reportes = () => {
               >
                 Limpiar
               </button>
+
+              <button
+                type="button"
+                className="btn btn-outline-dark"
+                onClick={imprimirReporte}
+              >
+                Imprimir reporte
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-outline-success"
+                onClick={exportarCSV}
+              >
+                Exportar CSV
+              </button>
             </div>
           </form>
         </div>
       </div>
 
-      <div className="row g-4 mb-4">
+      <div className="row g-4 mb-4 print-section">
         <div className="col-md-3">
-          <div className="card shadow-sm border-0 h-100">
+          <div className="card shadow-sm border-0 h-100 report-card">
             <div className="card-body">
               <p className="text-muted mb-1">Cantidad de ventas</p>
               <h3 className="fw-bold mb-1">{resumen?.cantidad_ventas || 0}</h3>
@@ -240,42 +350,48 @@ const Reportes = () => {
         </div>
 
         <div className="col-md-3">
-          <div className="card shadow-sm border-0 h-100">
+          <div className="card shadow-sm border-0 h-100 report-card">
             <div className="card-body">
               <p className="text-muted mb-1">Total completado</p>
-              <h3 className="fw-bold mb-1">{formatoMoneda(resumen?.total_completado)}</h3>
+              <h3 className="fw-bold mb-1">
+                {formatoMoneda(resumen?.total_completado)}
+              </h3>
               <small className="text-muted">Ingresos efectivos</small>
             </div>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card shadow-sm border-0 h-100">
+          <div className="card shadow-sm border-0 h-100 report-card">
             <div className="card-body">
               <p className="text-muted mb-1">Total anulado</p>
-              <h3 className="fw-bold mb-1">{formatoMoneda(resumen?.total_anulado)}</h3>
+              <h3 className="fw-bold mb-1">
+                {formatoMoneda(resumen?.total_anulado)}
+              </h3>
               <small className="text-muted">Ventas anuladas</small>
             </div>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card shadow-sm border-0 h-100">
+          <div className="card shadow-sm border-0 h-100 report-card">
             <div className="card-body">
               <p className="text-muted mb-1">Total general</p>
-              <h3 className="fw-bold mb-1">{formatoMoneda(resumen?.total_general)}</h3>
+              <h3 className="fw-bold mb-1">
+                {formatoMoneda(resumen?.total_general)}
+              </h3>
               <small className="text-muted">Total histórico filtrado</small>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card shadow-sm border-0 mb-4">
+      <div className="card shadow-sm border-0 mb-4 print-section">
         <div className="card-body">
           <h5 className="fw-bold mb-3">Detalle de ventas</h5>
 
           <div className="table-responsive">
-            <table className="table table-hover align-middle">
+            <table className="table table-hover align-middle report-table">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -326,12 +442,12 @@ const Reportes = () => {
 
       <div className="row g-4">
         <div className="col-lg-6">
-          <div className="card shadow-sm border-0">
+          <div className="card shadow-sm border-0 print-section">
             <div className="card-body">
               <h5 className="fw-bold mb-3">Ventas por método de pago</h5>
 
               <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle report-table">
                   <thead>
                     <tr>
                       <th>Método</th>
@@ -364,12 +480,12 @@ const Reportes = () => {
         </div>
 
         <div className="col-lg-6">
-          <div className="card shadow-sm border-0">
+          <div className="card shadow-sm border-0 print-section">
             <div className="card-body">
               <h5 className="fw-bold mb-3">Clientes con mayor compra</h5>
 
               <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle report-table">
                   <thead>
                     <tr>
                       <th>Cliente</th>

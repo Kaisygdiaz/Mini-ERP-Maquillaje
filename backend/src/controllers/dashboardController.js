@@ -7,21 +7,46 @@ const pool = require('../db/conexion');
 const obtenerResumenDashboard = async (req, res) => {
   try {
     const [[productos]] = await pool.query(`
-      SELECT COUNT(*) AS total_productos
+      SELECT 
+        COUNT(*) AS total_productos,
+        SUM(CASE WHEN estado = 'Activo' THEN 1 ELSE 0 END) AS productos_activos,
+        SUM(CASE WHEN estado = 'Inactivo' THEN 1 ELSE 0 END) AS productos_inactivos,
+        SUM(CASE WHEN estado = 'Agotado' THEN 1 ELSE 0 END) AS productos_agotados
       FROM productos
     `);
 
     const [[clientes]] = await pool.query(`
-      SELECT COUNT(*) AS total_clientes
+      SELECT 
+        COUNT(*) AS total_clientes,
+        SUM(CASE WHEN estado = 'Activo' THEN 1 ELSE 0 END) AS clientes_activos,
+        SUM(CASE WHEN estado = 'Inactivo' THEN 1 ELSE 0 END) AS clientes_inactivos
       FROM clientes
     `);
 
-    const [[ventas]] = await pool.query(`
+    const [[ventasCompletadas]] = await pool.query(`
       SELECT 
         COUNT(*) AS total_ventas,
         COALESCE(SUM(total), 0) AS ingresos_totales
       FROM ventas
       WHERE estado = 'Completada'
+    `);
+
+    const [[ventasAnuladas]] = await pool.query(`
+      SELECT 
+        COUNT(*) AS ventas_anuladas,
+        COALESCE(SUM(total), 0) AS total_anulado
+      FROM ventas
+      WHERE estado = 'Anulada'
+    `);
+
+    const [[ventasMesActual]] = await pool.query(`
+      SELECT
+        COUNT(*) AS ventas_mes_actual,
+        COALESCE(SUM(total), 0) AS ingresos_mes_actual
+      FROM ventas
+      WHERE estado = 'Completada'
+      AND YEAR(fecha_venta) = YEAR(CURDATE())
+      AND MONTH(fecha_venta) = MONTH(CURDATE())
     `);
 
     const [[inventario]] = await pool.query(`
@@ -41,11 +66,26 @@ const obtenerResumenDashboard = async (req, res) => {
 
     res.json({
       total_productos: productos.total_productos,
+      productos_activos: productos.productos_activos || 0,
+      productos_inactivos: productos.productos_inactivos || 0,
+      productos_agotados: productos.productos_agotados || 0,
+
       total_clientes: clientes.total_clientes,
-      total_ventas: ventas.total_ventas,
-      ingresos_totales: ventas.ingresos_totales,
+      clientes_activos: clientes.clientes_activos || 0,
+      clientes_inactivos: clientes.clientes_inactivos || 0,
+
+      total_ventas: ventasCompletadas.total_ventas,
+      ingresos_totales: ventasCompletadas.ingresos_totales,
+
+      ventas_anuladas: ventasAnuladas.ventas_anuladas,
+      total_anulado: ventasAnuladas.total_anulado,
+
+      ventas_mes_actual: ventasMesActual.ventas_mes_actual,
+      ingresos_mes_actual: ventasMesActual.ingresos_mes_actual,
+
       valor_inventario_compra: inventario.valor_inventario_compra,
       valor_inventario_venta: inventario.valor_inventario_venta,
+
       productos_stock_bajo: stockBajo.productos_stock_bajo
     });
   } catch (error) {

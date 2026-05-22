@@ -155,3 +155,98 @@ body {
   border-radius: 18px;
   padding: 32px;
 }
+
+.print-header {
+  display: none;
+}
+
+/* Estilos para impresión de reportes */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  .sidebar,
+  .btn,
+  form,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-header {
+    display: block;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222222;
+  }
+
+  .print-header h1 {
+    font-size: 22px;
+    margin: 0 0 6px 0;
+    color: #000000;
+  }
+
+  .print-header p {
+    margin: 2px 0;
+    font-size: 12px;
+    color: #333333;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 0;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #dddddd !important;
+    border-radius: 6px;
+  }
+
+  .card-body {
+    padding: 12px;
+  }
+
+  .page-title,
+  .page-subtitle {
+    color: #000000;
+  }
+
+  .print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 14px;
+  }
+
+  .report-card h3 {
+    font-size: 18px;
+  }
+
+  .report-card p,
+  .report-card small {
+    font-size: 11px;
+  }
+
+  .report-table,
+  .table {
+    width: 100%;
+    font-size: 11px;
+  }
+
+  .table th,
+  .table td {
+    padding: 6px;
+  }
+
+  .badge {
+    border: 1px solid #999999;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+}
