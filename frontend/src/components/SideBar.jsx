@@ -6,10 +6,14 @@ import {
   puedeVerCategorias,
   puedeVerClientes,
   puedeVerVentas,
-  puedeVerUsuarios
+  puedeVerUsuarios,
+  puedeVerInventario
 } from '../utils/permisos';
 
-
+/*
+  Menú lateral principal del sistema.
+  Muestra las opciones según el rol del usuario autenticado.
+*/
 const Sidebar = ({ usuario, cerrarSesion }) => {
   return (
     <aside className="sidebar">
@@ -54,6 +58,12 @@ const Sidebar = ({ usuario, cerrarSesion }) => {
         {puedeVerVentas(usuario) && (
           <NavLink to="/ventas" className="sidebar-link">
             Ventas
+          </NavLink>
+        )}
+
+        {puedeVerInventario(usuario) && (
+          <NavLink to="/inventario" className="sidebar-link">
+            Inventario
           </NavLink>
         )}
 

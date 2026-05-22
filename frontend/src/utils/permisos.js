@@ -1,7 +1,4 @@
-/*
-  Archivo centralizado de permisos por rol.
-  Permite controlar qué acciones puede realizar cada usuario dentro del sistema.
-*/
+
 
 export const ROLES = {
   ADMINISTRADOR: 'Administrador',
@@ -44,6 +41,14 @@ export const puedeVerVentas = (usuario) => {
   return esAdministrador(usuario) || esVendedor(usuario) || esGerencia(usuario);
 };
 
+export const puedeVerUsuarios = (usuario) => {
+  return esAdministrador(usuario);
+};
+
+export const puedeVerInventario = (usuario) => {
+  return esAdministrador(usuario) || esGerencia(usuario);
+};
+
 /*
   Permisos operativos.
 */
@@ -67,14 +72,14 @@ export const puedeAnularVentas = (usuario) => {
   return esAdministrador(usuario);
 };
 
-export const puedeVerReportesGerenciales = (usuario) => {
-  return esAdministrador(usuario) || esGerencia(usuario);
-};
-
-export const puedeVerUsuarios = (usuario) => {
-  return esAdministrador(usuario);
-};
-
 export const puedeGestionarUsuarios = (usuario) => {
   return esAdministrador(usuario);
+};
+
+export const puedeGestionarInventario = (usuario) => {
+  return esAdministrador(usuario);
+};
+
+export const puedeVerReportesGerenciales = (usuario) => {
+  return esAdministrador(usuario) || esGerencia(usuario);
 };

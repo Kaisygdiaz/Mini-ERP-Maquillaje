@@ -8,6 +8,7 @@ import Productos from './pages/Productos';
 import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
 import Usuarios from './pages/Usuarios';
+import Inventario from './pages/Inventario';
 import Login from './pages/Login';
 
 import {
@@ -16,7 +17,8 @@ import {
   puedeVerCategorias,
   puedeVerClientes,
   puedeVerVentas,
-  puedeVerUsuarios
+  puedeVerUsuarios,
+  puedeVerInventario
 } from './utils/permisos';
 
 import './styles/dashboard.css';
@@ -55,10 +57,21 @@ const obtenerRutaInicial = (usuario) => {
     return '/clientes';
   }
 
+  if (puedeVerInventario(usuario)) {
+    return '/inventario';
+  }
+
+  if (puedeVerUsuarios(usuario)) {
+    return '/usuarios';
+  }
+
   return '/';
 };
 
-
+/*
+  Componente principal de la aplicación.
+  Controla sesión, rutas protegidas y navegación según roles.
+*/
 function App() {
   const [usuario, setUsuario] = useState(() => {
     const usuarioGuardado = localStorage.getItem('usuario');
@@ -139,6 +152,18 @@ function App() {
                   redireccion={rutaInicial}
                 >
                   <Ventas />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/inventario"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerInventario(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Inventario />
                 </RutaProtegida>
               }
             />
