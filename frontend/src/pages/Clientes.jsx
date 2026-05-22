@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
+import { puedeGestionarClientes } from '../utils/permisos';
 
 /*
   Página para administrar clientes.
-  Permite listar, crear, editar y eliminar clientes desde el frontend.
+  Administrador y Vendedor pueden crear y editar clientes.
+  Gerencia solo puede consultar el listado.
 */
 const Clientes = () => {
   const [clientes, setClientes] = useState([]);
   const [clienteEditando, setClienteEditando] = useState(null);
   const [mensaje, setMensaje] = useState('');
+
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
+  const puedeGestionar = puedeGestionarClientes(usuarioActual);
 
   const [formulario, setFormulario] = useState({
     nombre: '',
@@ -54,6 +59,11 @@ const Clientes = () => {
   const guardarCliente = async (e) => {
     e.preventDefault();
 
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para gestionar clientes');
+      return;
+    }
+
     if (!formulario.nombre.trim()) {
       setMensaje('El nombre del cliente es obligatorio');
       return;
@@ -77,6 +87,11 @@ const Clientes = () => {
   };
 
   const cargarClienteParaEditar = (cliente) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para editar clientes');
+      return;
+    }
+
     setClienteEditando(cliente.id_cliente);
 
     setFormulario({
@@ -88,6 +103,11 @@ const Clientes = () => {
   };
 
   const eliminarCliente = async (id) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para eliminar clientes');
+      return;
+    }
+
     const confirmar = window.confirm('¿Seguro que deseas eliminar este cliente?');
 
     if (!confirmar) return;
@@ -117,84 +137,93 @@ const Clientes = () => {
         </div>
       )}
 
+      {!puedeGestionar && (
+        <div className="alert alert-light border py-2">
+          Estás consultando el módulo en modo lectura. Solo administración y ventas
+          pueden crear o editar clientes.
+        </div>
+      )}
+
       <div className="row g-4">
-        <div className="col-lg-4">
-          <div className="card shadow-sm border-0">
-            <div className="card-body">
-              <h5 className="fw-bold mb-3">
-                {clienteEditando ? 'Editar cliente' : 'Nuevo cliente'}
-              </h5>
+        {puedeGestionar && (
+          <div className="col-lg-4">
+            <div className="card shadow-sm border-0">
+              <div className="card-body">
+                <h5 className="fw-bold mb-3">
+                  {clienteEditando ? 'Editar cliente' : 'Nuevo cliente'}
+                </h5>
 
-              <form onSubmit={guardarCliente}>
-                <div className="mb-3">
-                  <label className="form-label">Nombre</label>
-                  <input
-                    type="text"
-                    name="nombre"
-                    className="form-control"
-                    value={formulario.nombre}
-                    onChange={manejarCambio}
-                    placeholder="Ej. María López"
-                  />
-                </div>
+                <form onSubmit={guardarCliente}>
+                  <div className="mb-3">
+                    <label className="form-label">Nombre</label>
+                    <input
+                      type="text"
+                      name="nombre"
+                      className="form-control"
+                      value={formulario.nombre}
+                      onChange={manejarCambio}
+                      placeholder="Ej. María López"
+                    />
+                  </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Teléfono</label>
-                  <input
-                    type="text"
-                    name="telefono"
-                    className="form-control"
-                    value={formulario.telefono}
-                    onChange={manejarCambio}
-                    placeholder="Ej. 5555-1111"
-                  />
-                </div>
+                  <div className="mb-3">
+                    <label className="form-label">Teléfono</label>
+                    <input
+                      type="text"
+                      name="telefono"
+                      className="form-control"
+                      value={formulario.telefono}
+                      onChange={manejarCambio}
+                      placeholder="Ej. 5555-1111"
+                    />
+                  </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Correo</label>
-                  <input
-                    type="email"
-                    name="correo"
-                    className="form-control"
-                    value={formulario.correo}
-                    onChange={manejarCambio}
-                    placeholder="Ej. cliente@email.com"
-                  />
-                </div>
+                  <div className="mb-3">
+                    <label className="form-label">Correo</label>
+                    <input
+                      type="email"
+                      name="correo"
+                      className="form-control"
+                      value={formulario.correo}
+                      onChange={manejarCambio}
+                      placeholder="Ej. cliente@email.com"
+                    />
+                  </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Dirección</label>
-                  <textarea
-                    name="direccion"
-                    className="form-control"
-                    rows="3"
-                    value={formulario.direccion}
-                    onChange={manejarCambio}
-                    placeholder="Dirección del cliente"
-                  />
-                </div>
+                  <div className="mb-3">
+                    <label className="form-label">Dirección</label>
+                    <textarea
+                      name="direccion"
+                      className="form-control"
+                      rows="3"
+                      value={formulario.direccion}
+                      onChange={manejarCambio}
+                      placeholder="Dirección del cliente"
+                    />
+                  </div>
 
-                <div className="d-flex gap-2">
-                  <button type="submit" className="btn btn-primary">
-                    {clienteEditando ? 'Actualizar' : 'Guardar'}
-                  </button>
-
-                  {clienteEditando && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={limpiarFormulario}
-                    >
-                      Cancelar
+                  <div className="d-flex gap-2">
+                    <button type="submit" className="btn btn-primary">
+                      {clienteEditando ? 'Actualizar' : 'Guardar'}
                     </button>
-                  )}
-                </div>
-              </form>
+
+                    {clienteEditando && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={limpiarFormulario}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="col-lg-8">
+        <div className={puedeGestionar ? 'col-lg-8' : 'col-12'}>
           <div className="card shadow-sm border-0">
             <div className="card-body">
               <h5 className="fw-bold mb-3">Listado de clientes</h5>
@@ -208,7 +237,9 @@ const Clientes = () => {
                       <th>Teléfono</th>
                       <th>Correo</th>
                       <th>Dirección</th>
-                      <th className="text-end acciones-tabla">Acciones</th>
+                      {puedeGestionar && (
+                        <th className="text-end acciones-tabla">Acciones</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -219,27 +250,33 @@ const Clientes = () => {
                         <td>{cliente.telefono || 'Sin teléfono'}</td>
                         <td>{cliente.correo || 'Sin correo'}</td>
                         <td>{cliente.direccion || 'Sin dirección'}</td>
-                        <td className="text-end acciones-tabla">
-                          <button
-                            className="btn btn-sm btn-warning me-2"
-                            onClick={() => cargarClienteParaEditar(cliente)}
-                          >
-                            Editar
-                          </button>
 
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => eliminarCliente(cliente.id_cliente)}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
+                        {puedeGestionar && (
+                          <td className="text-end acciones-tabla">
+                            <button
+                              className="btn btn-sm btn-warning me-2"
+                              onClick={() => cargarClienteParaEditar(cliente)}
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => eliminarCliente(cliente.id_cliente)}
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
 
                     {clientes.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="text-muted">
+                        <td
+                          colSpan={puedeGestionar ? 6 : 5}
+                          className="text-muted"
+                        >
                           No hay clientes registrados.
                         </td>
                       </tr>
