@@ -3,7 +3,7 @@ import api from '../api/axiosConfig';
 
 /*
   Página para administrar categorías.
-  Permite listar, crear, editar y eliminar categorías desde el frontend.
+  Solo el administrador tiene acceso a este módulo desde el menú.
 */
 const Categorias = () => {
   const [categorias, setCategorias] = useState([]);
@@ -80,22 +80,41 @@ const Categorias = () => {
     setFormulario({
       nombre: categoria.nombre,
       descripcion: categoria.descripcion || '',
-      estado: categoria.estado
+      estado: categoria.estado || 'Activo'
     });
   };
 
-  const eliminarCategoria = async (id) => {
-    const confirmar = window.confirm('¿Seguro que deseas eliminar esta categoría?');
+  const inactivarCategoria = async (categoria) => {
+    const confirmar = window.confirm(
+      `¿Seguro que deseas inactivar la categoría "${categoria.nombre}"?`
+    );
 
     if (!confirmar) return;
 
     try {
-      await api.delete(`/categorias/${id}`);
-      setMensaje('Categoría eliminada correctamente');
+      await api.put(`/categorias/${categoria.id_categoria}/inactivar`);
+      setMensaje('Categoría inactivada correctamente');
       obtenerCategorias();
     } catch (error) {
-      console.error('Error al eliminar categoría:', error);
-      setMensaje('No se pudo eliminar la categoría. Puede estar relacionada con productos.');
+      console.error('Error al inactivar categoría:', error);
+      setMensaje('Error al inactivar la categoría');
+    }
+  };
+
+  const activarCategoria = async (categoria) => {
+    const confirmar = window.confirm(
+      `¿Seguro que deseas activar la categoría "${categoria.nombre}"?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await api.put(`/categorias/${categoria.id_categoria}/activar`);
+      setMensaje('Categoría activada correctamente');
+      obtenerCategorias();
+    } catch (error) {
+      console.error('Error al activar categoría:', error);
+      setMensaje('Error al activar la categoría');
     }
   };
 
@@ -193,7 +212,7 @@ const Categorias = () => {
                       <th>Nombre</th>
                       <th>Descripción</th>
                       <th>Estado</th>
-                      <th className="text-end">Acciones</th>
+                      <th className="text-end acciones-tabla">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -213,7 +232,7 @@ const Categorias = () => {
                             {categoria.estado}
                           </span>
                         </td>
-                        <td className="text-end">
+                        <td className="text-end acciones-tabla">
                           <button
                             className="btn btn-sm btn-warning me-2"
                             onClick={() => cargarCategoriaParaEditar(categoria)}
@@ -221,12 +240,23 @@ const Categorias = () => {
                             Editar
                           </button>
 
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => eliminarCategoria(categoria.id_categoria)}
-                          >
-                            Eliminar
-                          </button>
+                          {categoria.estado === 'Activo' && (
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => inactivarCategoria(categoria)}
+                            >
+                              Inactivar
+                            </button>
+                          )}
+
+                          {categoria.estado === 'Inactivo' && (
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => activarCategoria(categoria)}
+                            >
+                              Activar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
