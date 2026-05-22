@@ -11,6 +11,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const authRoutes = require('./routes/authRoutes');
 const usuariosRoutes = require('./routes/usuariosRoutes');
 const inventarioRoutes = require('./routes/inventarioRoutes');
+const reportesRoutes = require('./routes/reportesRoutes');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/inventario', inventarioRoutes);
+app.use('/api/reportes', reportesRoutes);
 /*
   Ruta principal de prueba.
 */
