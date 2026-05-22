@@ -7,6 +7,7 @@ import Categorias from './pages/Categorias';
 import Productos from './pages/Productos';
 import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
+import Usuarios from './pages/Usuarios';
 import Login from './pages/Login';
 
 import {
@@ -14,15 +15,15 @@ import {
   puedeVerProductos,
   puedeVerCategorias,
   puedeVerClientes,
-  puedeVerVentas
+  puedeVerVentas,
+  puedeVerUsuarios
 } from './utils/permisos';
 
 import './styles/dashboard.css';
 
 /*
   Ruta protegida por permisos.
-  Si el usuario no tiene permiso para acceder a una página,
-  se redirige automáticamente a la página inicial permitida para su rol.
+  Si el usuario no tiene acceso, se redirige a una ruta permitida según su rol.
 */
 const RutaProtegida = ({ permitido, redireccion, children }) => {
   if (!permitido) {
@@ -54,13 +55,10 @@ const obtenerRutaInicial = (usuario) => {
     return '/clientes';
   }
 
-  return '/login';
+  return '/';
 };
 
-/*
-  Componente principal de la aplicación.
-  Controla la sesión activa, las rutas protegidas y la navegación según roles.
-*/
+
 function App() {
   const [usuario, setUsuario] = useState(() => {
     const usuarioGuardado = localStorage.getItem('usuario');
@@ -141,6 +139,18 @@ function App() {
                   redireccion={rutaInicial}
                 >
                   <Ventas />
+                </RutaProtegida>
+              }
+            />
+
+            <Route
+              path="/usuarios"
+              element={
+                <RutaProtegida
+                  permitido={puedeVerUsuarios(usuario)}
+                  redireccion={rutaInicial}
+                >
+                  <Usuarios />
                 </RutaProtegida>
               }
             />

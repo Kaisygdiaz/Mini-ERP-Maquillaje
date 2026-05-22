@@ -70,3 +70,11 @@ export const puedeAnularVentas = (usuario) => {
 export const puedeVerReportesGerenciales = (usuario) => {
   return esAdministrador(usuario) || esGerencia(usuario);
 };
+
+export const puedeVerUsuarios = (usuario) => {
+  return esAdministrador(usuario);
+};
+
+export const puedeGestionarUsuarios = (usuario) => {
+  return esAdministrador(usuario);
+};
