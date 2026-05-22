@@ -4,7 +4,7 @@ import { puedeGestionarProductos } from '../utils/permisos';
 
 /*
   Página para administrar productos.
-  El administrador puede crear, editar y eliminar productos.
+  El administrador puede crear, editar, activar e inactivar productos.
   Vendedor y Gerencia solo pueden consultar el listado de productos.
 */
 const Productos = () => {
@@ -158,23 +158,69 @@ const Productos = () => {
     });
   };
 
-  const eliminarProducto = async (id) => {
+  const inactivarProducto = async (producto) => {
     if (!puedeGestionar) {
-      setMensaje('No tienes permisos para eliminar productos');
+      setMensaje('No tienes permisos para inactivar productos');
       return;
     }
 
-    const confirmar = window.confirm('¿Seguro que deseas eliminar este producto?');
+    const confirmar = window.confirm(
+      `¿Seguro que deseas inactivar el producto "${producto.nombre}"?`
+    );
 
     if (!confirmar) return;
 
     try {
-      await api.delete(`/productos/${id}`);
-      setMensaje('Producto eliminado correctamente');
+      await api.put(`/productos/${producto.id_producto}/inactivar`);
+      setMensaje('Producto inactivado correctamente');
       obtenerProductos();
     } catch (error) {
-      console.error('Error al eliminar producto:', error);
-      setMensaje('No se pudo eliminar el producto. Puede estar relacionado con ventas o inventario.');
+      console.error('Error al inactivar producto:', error);
+      setMensaje('Error al inactivar el producto');
+    }
+  };
+
+  const activarProducto = async (producto) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para activar productos');
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Seguro que deseas activar el producto "${producto.nombre}"?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await api.put(`/productos/${producto.id_producto}/activar`);
+      setMensaje('Producto activado correctamente');
+      obtenerProductos();
+    } catch (error) {
+      console.error('Error al activar producto:', error);
+      setMensaje('Error al activar el producto');
+    }
+  };
+
+  const marcarAgotado = async (producto) => {
+    if (!puedeGestionar) {
+      setMensaje('No tienes permisos para cambiar el estado del producto');
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Seguro que deseas marcar como agotado el producto "${producto.nombre}"?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await api.put(`/productos/${producto.id_producto}/agotado`);
+      setMensaje('Producto marcado como agotado correctamente');
+      obtenerProductos();
+    } catch (error) {
+      console.error('Error al marcar producto como agotado:', error);
+      setMensaje('Error al marcar el producto como agotado');
     }
   };
 
@@ -196,7 +242,7 @@ const Productos = () => {
       {!puedeGestionar && (
         <div className="alert alert-light border py-2">
           Estás consultando el módulo en modo lectura. Solo el administrador puede crear,
-          editar o eliminar productos.
+          editar, activar o inactivar productos.
         </div>
       )}
 
@@ -426,12 +472,32 @@ const Productos = () => {
                               Editar
                             </button>
 
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() => eliminarProducto(producto.id_producto)}
-                            >
-                              Eliminar
-                            </button>
+                            {producto.estado === 'Activo' && (
+                              <>
+                                <button
+                                  className="btn btn-sm btn-secondary me-2"
+                                  onClick={() => marcarAgotado(producto)}
+                                >
+                                  Agotado
+                                </button>
+
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => inactivarProducto(producto)}
+                                >
+                                  Inactivar
+                                </button>
+                              </>
+                            )}
+
+                            {(producto.estado === 'Inactivo' || producto.estado === 'Agotado') && (
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => activarProducto(producto)}
+                              >
+                                Activar
+                              </button>
+                            )}
                           </td>
                         )}
                       </tr>
