@@ -1102,8 +1102,17 @@ textarea.form-control {
 /* Estilos para impresión de reportes */
 @media print {
   @page {
-    size: A4;
-    margin: 14mm;
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10px !important;
   }
 
   .sidebar,
@@ -1113,33 +1122,41 @@ textarea.form-control {
     display: none !important;
   }
 
-  .print-header {
-    display: block;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #222222;
-  }
-
-  .print-header h1 {
-    font-size: 22px;
-    margin: 0 0 6px 0;
-    color: #000000;
-  }
-
-  .print-header p {
-    margin: 2px 0;
-    font-size: 12px;
-    color: #333333;
+  .app-layout {
+    display: block !important;
+    width: 100% !important;
+    min-height: auto !important;
   }
 
   .main-content {
-    margin-left: 0;
-    width: 100%;
-    padding: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
   }
 
-  body {
-    background: #ffffff;
+  .print-header {
+    display: block !important;
+    margin-bottom: 10px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid #222222 !important;
+  }
+
+  .print-header h1 {
+    font-size: 18px !important;
+    margin: 0 0 4px 0 !important;
+    color: #000000 !important;
+  }
+
+  .print-header p {
+    margin: 2px 0 !important;
+    font-size: 10px !important;
+    color: #333333 !important;
+  }
+
+  .page-title,
+  .page-subtitle {
+    color: #000000 !important;
   }
 
   .card,
@@ -1147,48 +1164,111 @@ textarea.form-control {
   .stat-card {
     box-shadow: none !important;
     border: 1px solid #dddddd !important;
-    border-radius: 6px;
+    border-radius: 8px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .card-body,
   .dashboard-panel {
-    padding: 12px;
-  }
-
-  .page-title,
-  .page-subtitle {
-    color: #000000;
+    padding: 10px !important;
   }
 
   .print-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-bottom: 14px;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 12px !important;
+  }
+
+  .table-responsive {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .table,
+  .report-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 8.5px !important;
+  }
+
+  .productos-table,
+  .clientes-table,
+  .ventas-table,
+  .usuarios-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .table th,
+  .table td,
+  .report-table th,
+  .report-table td {
+    padding: 4px 3px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    vertical-align: middle !important;
+    line-height: 1.25 !important;
+  }
+
+  .table th,
+  .report-table th {
+    font-size: 7.5px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .table td,
+  .report-table td {
+    font-size: 8.5px !important;
+  }
+
+  .acciones-tabla {
+    min-width: 0 !important;
+    width: auto !important;
+    white-space: normal !important;
+  }
+
+  .badge {
+    border: 1px solid #999999 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    font-size: 7.5px !important;
+    padding: 2px 4px !important;
+    white-space: normal !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    color: #000000 !important;
+    margin-bottom: 8px !important;
+  }
+
+  h3,
+  h4,
+  h5 {
+    font-size: 14px !important;
+  }
+
+  p,
+  small {
+    font-size: 9px !important;
   }
 
   .report-card h3 {
-    font-size: 18px;
+    font-size: 15px !important;
   }
 
   .report-card p,
   .report-card small {
-    font-size: 11px;
-  }
-
-  .report-table,
-  .table {
-    width: 100%;
-    font-size: 11px;
-  }
-
-  .table th,
-  .table td {
-    padding: 6px;
-  }
-
-  .badge {
-    border: 1px solid #999999;
-    color: #000000 !important;
-    background: #ffffff !important;
+    font-size: 9px !important;
   }
 }
