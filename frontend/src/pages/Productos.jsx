@@ -1,12 +1,16 @@
-
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
-import { puedeGestionarProductos } from '../utils/permisos';
+
+import {
+  puedeGestionarProductos,
+  puedeVerReportesGerenciales
+} from '../utils/permisos';
 
 /*
   Página para administrar productos.
   El administrador puede crear, editar, activar e inactivar productos.
-  Vendedor y Gerencia solo pueden consultar el listado de productos.
+  Vendedor solo puede consultar y operar según permisos.
+  Gerencia puede consultar listado y resumen gerencial.
 */
 const Productos = () => {
   const [productos, setProductos] = useState([]);
@@ -20,6 +24,7 @@ const Productos = () => {
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const puedeGestionar = puedeGestionarProductos(usuarioActual);
+  const puedeVerResumenGerencial = puedeVerReportesGerenciales(usuarioActual);
 
   const [formulario, setFormulario] = useState({
     id_categoria: '',
@@ -323,45 +328,47 @@ const Productos = () => {
         </div>
       )}
 
-      <div className="dashboard-kpi-grid mb-4">
-        <div className="stat-card stat-card-info">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Total productos</span>
-            <span className="stat-card-accent"></span>
+      {puedeVerResumenGerencial && (
+        <div className="dashboard-kpi-grid mb-4">
+          <div className="stat-card stat-card-info">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Total productos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenProductos.total}</div>
+            <p className="stat-card-description">Productos registrados en el sistema</p>
           </div>
-          <div className="stat-card-value">{resumenProductos.total}</div>
-          <p className="stat-card-description">Productos registrados en el sistema</p>
-        </div>
 
-        <div className="stat-card stat-card-success">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Activos</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Activos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenProductos.activos}</div>
+            <p className="stat-card-description">Disponibles para venta</p>
           </div>
-          <div className="stat-card-value">{resumenProductos.activos}</div>
-          <p className="stat-card-description">Disponibles para venta</p>
-        </div>
 
-        <div className="stat-card stat-card-danger">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Stock bajo</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-danger">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Stock bajo</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenProductos.stockBajo}</div>
+            <p className="stat-card-description">Requieren revisión de inventario</p>
           </div>
-          <div className="stat-card-value">{resumenProductos.stockBajo}</div>
-          <p className="stat-card-description">Requieren revisión de inventario</p>
-        </div>
 
-        <div className="stat-card stat-card-secondary">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Agotados/Inactivos</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-secondary">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Agotados/Inactivos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">
+              {resumenProductos.agotados + resumenProductos.inactivos}
+            </div>
+            <p className="stat-card-description">Fuera de venta actualmente</p>
           </div>
-          <div className="stat-card-value">
-            {resumenProductos.agotados + resumenProductos.inactivos}
-          </div>
-          <p className="stat-card-description">Fuera de venta actualmente</p>
         </div>
-      </div>
+      )}
 
       <div className="row g-4">
         {puedeGestionar && (

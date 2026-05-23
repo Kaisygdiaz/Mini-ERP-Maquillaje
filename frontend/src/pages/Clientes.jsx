@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api/axiosConfig';
-import { puedeGestionarClientes } from '../utils/permisos';
+
+import {
+  puedeGestionarClientes,
+  puedeVerReportesGerenciales
+} from '../utils/permisos';
 
 /*
   Página para administrar clientes.
   Administrador y Vendedor pueden crear, editar, activar e inactivar clientes.
-  Gerencia solo puede consultar el listado.
+  Gerencia solo puede consultar el listado y resumen gerencial.
 */
 const Clientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -17,6 +21,7 @@ const Clientes = () => {
 
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const puedeGestionar = puedeGestionarClientes(usuarioActual);
+  const puedeVerResumenGerencial = puedeVerReportesGerenciales(usuarioActual);
 
   const [formulario, setFormulario] = useState({
     nombre: '',
@@ -231,43 +236,45 @@ const Clientes = () => {
         </div>
       )}
 
-      <div className="dashboard-kpi-grid mb-4">
-        <div className="stat-card stat-card-info">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Total clientes</span>
-            <span className="stat-card-accent"></span>
+      {puedeVerResumenGerencial && (
+        <div className="dashboard-kpi-grid mb-4">
+          <div className="stat-card stat-card-info">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Total clientes</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenClientes.total}</div>
+            <p className="stat-card-description">Clientes registrados en el ERP</p>
           </div>
-          <div className="stat-card-value">{resumenClientes.total}</div>
-          <p className="stat-card-description">Clientes registrados en el ERP</p>
-        </div>
 
-        <div className="stat-card stat-card-success">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Activos</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Activos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenClientes.activos}</div>
+            <p className="stat-card-description">Clientes disponibles para ventas</p>
           </div>
-          <div className="stat-card-value">{resumenClientes.activos}</div>
-          <p className="stat-card-description">Clientes disponibles para ventas</p>
-        </div>
 
-        <div className="stat-card stat-card-secondary">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Inactivos</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-secondary">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Inactivos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenClientes.inactivos}</div>
+            <p className="stat-card-description">Clientes conservados por historial</p>
           </div>
-          <div className="stat-card-value">{resumenClientes.inactivos}</div>
-          <p className="stat-card-description">Clientes conservados por historial</p>
-        </div>
 
-        <div className="stat-card stat-card-primary">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Con contacto</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-primary">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Con contacto</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenClientes.conTelefono}</div>
+            <p className="stat-card-description">Clientes con teléfono registrado</p>
           </div>
-          <div className="stat-card-value">{resumenClientes.conTelefono}</div>
-          <p className="stat-card-description">Clientes con teléfono registrado</p>
         </div>
-      </div>
+      )}
 
       <div className="row g-4">
         {puedeGestionar && (

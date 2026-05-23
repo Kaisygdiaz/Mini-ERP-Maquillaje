@@ -3,14 +3,15 @@ import api from '../api/axiosConfig';
 
 import {
   puedeRegistrarVentas,
-  puedeAnularVentas
+  puedeAnularVentas,
+  puedeVerReportesGerenciales
 } from '../utils/permisos';
 
 /*
   Página para registrar y consultar ventas.
   Administrador y Vendedor pueden registrar ventas.
   Solo Administrador puede anular ventas.
-  Gerencia únicamente puede consultar historial y detalle.
+  Gerencia únicamente puede consultar historial, detalle y resumen gerencial.
 */
 const Ventas = () => {
   const [ventas, setVentas] = useState([]);
@@ -28,6 +29,7 @@ const Ventas = () => {
 
   const puedeRegistrar = puedeRegistrarVentas(usuarioActual);
   const puedeAnular = puedeAnularVentas(usuarioActual);
+  const puedeVerResumenGerencial = puedeVerReportesGerenciales(usuarioActual);
 
   const [formulario, setFormulario] = useState({
     id_cliente: '',
@@ -361,47 +363,49 @@ const Ventas = () => {
         </div>
       )}
 
-      <div className="dashboard-kpi-grid mb-4">
-        <div className="stat-card stat-card-info">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Total ventas</span>
-            <span className="stat-card-accent"></span>
+      {puedeVerResumenGerencial && (
+        <div className="dashboard-kpi-grid mb-4">
+          <div className="stat-card stat-card-info">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Total ventas</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenVentas.totalVentas}</div>
+            <p className="stat-card-description">Ventas registradas en el sistema</p>
           </div>
-          <div className="stat-card-value">{resumenVentas.totalVentas}</div>
-          <p className="stat-card-description">Ventas registradas en el sistema</p>
-        </div>
 
-        <div className="stat-card stat-card-success">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Completadas</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Completadas</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenVentas.completadas}</div>
+            <p className="stat-card-description">Operaciones efectivas</p>
           </div>
-          <div className="stat-card-value">{resumenVentas.completadas}</div>
-          <p className="stat-card-description">Operaciones efectivas</p>
-        </div>
 
-        <div className="stat-card stat-card-primary">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Ingresos</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-primary">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Ingresos</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">
+              {formatoMoneda(resumenVentas.ingresosCompletados)}
+            </div>
+            <p className="stat-card-description">Total de ventas completadas</p>
           </div>
-          <div className="stat-card-value">
-            {formatoMoneda(resumenVentas.ingresosCompletados)}
-          </div>
-          <p className="stat-card-description">Total de ventas completadas</p>
-        </div>
 
-        <div className="stat-card stat-card-danger">
-          <div className="stat-card-top">
-            <span className="stat-card-label">Anuladas</span>
-            <span className="stat-card-accent"></span>
+          <div className="stat-card stat-card-danger">
+            <div className="stat-card-top">
+              <span className="stat-card-label">Anuladas</span>
+              <span className="stat-card-accent"></span>
+            </div>
+            <div className="stat-card-value">{resumenVentas.anuladas}</div>
+            <p className="stat-card-description">
+              {formatoMoneda(resumenVentas.totalAnulado)} anulados
+            </p>
           </div>
-          <div className="stat-card-value">{resumenVentas.anuladas}</div>
-          <p className="stat-card-description">
-            {formatoMoneda(resumenVentas.totalAnulado)} anulados
-          </p>
         </div>
-      </div>
+      )}
 
       <div className="row g-4">
         {puedeRegistrar && (
@@ -501,6 +505,7 @@ const Ventas = () => {
                           <th></th>
                         </tr>
                       </thead>
+
                       <tbody>
                         {detalleVenta.map((item) => (
                           <tr key={item.id_producto}>
